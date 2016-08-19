@@ -4,8 +4,10 @@ import android.content.Context;
 import android.content.res.TypedArray;
 import android.graphics.Point;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewConfiguration;
 import android.view.ViewGroup;
 import android.view.animation.AlphaAnimation;
 import android.view.animation.Animation;
@@ -19,11 +21,15 @@ import java.util.ArrayList;
 import java.util.Collections;
 
 /**
+ *
  * Created by andyken on 16/3/22.
  */
 public class DraggableGridView extends ViewGroup implements View.OnTouchListener, View.OnClickListener ,View.OnLongClickListener{
+	private static final String TAG = "DraggableGridView";
 
 	private AttributeSet attributeSet;
+    //当ViewGroup被touchDown时的坐标;用于长按事件发生时，判断是否挪动View
+    private int touchDownX = -1,touchDownY = -1;
 	private int draggedIndex = -1, lastX = -1, lastY = -1, lastTargetIndex = -1;
 	private int xPadding, yPadding;//the x-axis and y-axis padding of the item
 	private int itemWidth, itemHeight, colCount;
@@ -33,9 +39,15 @@ public class DraggableGridView extends ViewGroup implements View.OnTouchListener
 	private AdapterView.OnItemClickListener onItemClickListener;
 	private OnRearrangeListener onRearrangeListener;
 
+
+    //大于此值认为是滑动
+    final int touchSlop;
+
+
 	public DraggableGridView(Context context, AttributeSet attributeSet) {
 		super(context, attributeSet);
 		this.attributeSet = attributeSet;
+        touchSlop = ViewConfiguration.get(context).getScaledTouchSlop();
 		init();
 	}
 
@@ -70,6 +82,8 @@ public class DraggableGridView extends ViewGroup implements View.OnTouchListener
 	@Override
 	public void addView(View child) {
 		super.addView(child);
+		//给子View增加长按事件
+//		child.setOnLongClickListener(this);
 		newPositions.add(-1);
 	}
 
@@ -81,14 +95,19 @@ public class DraggableGridView extends ViewGroup implements View.OnTouchListener
 
 	@Override
 	public void onLayout(boolean changed, int l, int t, int r, int b) {
-		xPadding = ((r - l) - (itemWidth * colCount)) / (colCount + 1);
-		for (int i = 0; i < getChildCount(); i++) {
-			if (i != draggedIndex) {
-				Point xy = getCoorFromIndex(i);
-				getChildAt(i).layout(xy.x, xy.y, xy.x + itemWidth, xy.y + itemHeight);
-			}
-		}
+        layoutChilden(l,r);
 	}
+
+    void layoutChilden(int l, int r){
+        xPadding = ((r - l) - (itemWidth * colCount)) / (colCount + 1);
+        for (int i = 0; i < getChildCount(); i++) {
+            if (i != draggedIndex) {
+                Point xy = getCoorFromIndex(i);
+                getChildAt(i).layout(xy.x, xy.y, xy.x + itemWidth, xy.y + itemHeight);
+            }
+        }
+    }
+
 
 	@Override
 	protected int getChildDrawingOrder(int childCount, int i) {
@@ -125,8 +144,9 @@ public class DraggableGridView extends ViewGroup implements View.OnTouchListener
 	private int getColFromCoor(int coor) {
 		coor -= xPadding;
 		for (int i = 0; coor > 0; i++) {
-			if (coor < itemWidth)
+			if (coor < itemWidth) {
 				return i;
+			}
 			coor -= (itemWidth + xPadding);
 		}
 		return -1;
@@ -168,13 +188,27 @@ public class DraggableGridView extends ViewGroup implements View.OnTouchListener
 				yPadding + (itemHeight + yPadding) * row);
 	}
 
+	@Override
 	public void onClick(View view) {
+		if (isMoveOverSlop()){
+			return;
+		}
+
 		if (onItemClickListener != null && getIndex() != -1) {
 			onItemClickListener.onItemClick(null, getChildAt(getIndex()), getIndex(), getIndex() / colCount);
 		}
 	}
 
+	//一个 item 子View被长按
+	@Override
 	public boolean onLongClick(View view) {
+		Log.i(TAG,"onLongClick -- > "+view);
+        if (isMoveOverSlop()){
+            //滑动距离大于阀值,认为是滑动不是长按
+			//并且要返回true,代表此touch事件被消费了，不再传递
+            return true;
+        }
+
 		int index = getIndex();
 		if (index != -1) {
 			//如果长按的位置在
@@ -185,12 +219,35 @@ public class DraggableGridView extends ViewGroup implements View.OnTouchListener
 		return false;
 	}
 
+
+	/**
+	 * 移动距离是否超过slop阀值
+	 */
+	boolean isMoveOverSlop(){
+		int temp_A = Math.abs(lastX - touchDownX);
+		int temp_B = Math.abs(lastY - touchDownY);
+
+		double deltaPath = java.lang.Math.sqrt(temp_A*temp_A + temp_B*temp_B);
+		if (deltaPath > touchSlop){
+			//滑动距离大于阀值,认为是滑动
+			return true;
+		}else{
+			return false;
+		}
+	}
+
+
 	public boolean onTouch(View view, MotionEvent event) {
+        Log.i(TAG,"onTouch -- > MotionEvent : "+event);
+
 		int action = event.getAction();
 		switch (action) {
 			case MotionEvent.ACTION_DOWN:
 				lastX = (int) event.getX();
 				lastY = (int) event.getY();
+                //给touchDown赋值
+                touchDownX = lastX;
+                touchDownY = lastY;
 				break;
 			case MotionEvent.ACTION_MOVE:
 				int deltaX = (int) event.getX() - lastX;
@@ -223,9 +280,11 @@ public class DraggableGridView extends ViewGroup implements View.OnTouchListener
 				break;
 		}
 		//如果存在拖动item 则消费掉该事件
-		if (draggedIndex != -1) {
-			return true;
+        if (draggedIndex != -1) {
+			Log.e(TAG, "onTouch -- > return : "+true);
+            return true;
 		}
+        Log.i(TAG,"onTouch -- > return : "+false);
 		return false;
 	}
 
@@ -331,7 +390,8 @@ public class DraggableGridView extends ViewGroup implements View.OnTouchListener
 			newPositions.set(i, -1);
 			addView(children.get(i));
 		}
-		onLayout(true, getLeft(), getTop(), getRight(), getBottom());
+//		onLayout(true, getLeft(), getTop(), getRight(), getBottom());
+        layoutChilden(getLeft(), getRight());
 	}
 
 	/**
@@ -352,6 +412,6 @@ public class DraggableGridView extends ViewGroup implements View.OnTouchListener
 
 	public interface OnRearrangeListener {
 
-		public abstract void onRearrange(int oldIndex, int newIndex);
+		void onRearrange(int oldIndex, int newIndex);
 	}
 }
