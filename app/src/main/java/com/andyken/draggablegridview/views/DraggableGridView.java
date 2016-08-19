@@ -19,6 +19,7 @@ import com.andyken.draggablegridview.R;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 
 /**
  *
@@ -33,6 +34,7 @@ public class DraggableGridView extends ViewGroup implements View.OnTouchListener
 	private int draggedIndex = -1, lastX = -1, lastY = -1, lastTargetIndex = -1;
 	private int xPadding, yPadding;//the x-axis and y-axis padding of the item
 	private int itemWidth, itemHeight, colCount;
+    //所有子View的index？
 	private ArrayList<Integer> newPositions = new ArrayList<Integer>();
 	private static int ANIM_DURATION = 150;
 
@@ -43,6 +45,12 @@ public class DraggableGridView extends ViewGroup implements View.OnTouchListener
     //大于此值认为是滑动
     final int touchSlop;
 
+    //indicatorView的index
+    private int mIndicatorIndex;
+    //指示移动的View落点的View
+    private View mIndicatorView;
+
+    private List<View> childViewList = new ArrayList<>();
 
 	public DraggableGridView(Context context, AttributeSet attributeSet) {
 		super(context, attributeSet);
@@ -79,39 +87,80 @@ public class DraggableGridView extends ViewGroup implements View.OnTouchListener
 		setOnLongClickListener(this);
 	}
 
+	public void addIndicatorView(View child) {
+		super.addView(child);
+        mIndicatorView = child;
+	}
+
+
+    //把指示View移动到指定index
+    void moveIndicatorViewToIndex(int index){
+        if (mIndicatorView == null){
+            //没有indicator,啥也不做
+            return;
+        }
+
+        if (mIndicatorIndex == index){
+            //啥也不做
+            return;
+        }
+        mIndicatorIndex = index;
+
+        layoutViewToIndex(mIndicatorView, index);
+    }
+
 	@Override
 	public void addView(View child) {
 		super.addView(child);
-		//给子View增加长按事件
-//		child.setOnLongClickListener(this);
+        childViewList.add(child);
 		newPositions.add(-1);
 	}
 
 	@Override
 	public void removeViewAt(int index) {
 		super.removeViewAt(index);
+        childViewList.remove(index);
 		newPositions.remove(index);
 	}
 
 	@Override
 	public void onLayout(boolean changed, int l, int t, int r, int b) {
-        layoutChilden(l,r);
+        layoutChildren(l, r);
 	}
 
-    void layoutChilden(int l, int r){
+    void layoutChildren(int l, int r){
         xPadding = ((r - l) - (itemWidth * colCount)) / (colCount + 1);
-        for (int i = 0; i < getChildCount(); i++) {
+        for (int i = 0; i < getChildViewCount(); i++) {
             if (i != draggedIndex) {
-                Point xy = getCoorFromIndex(i);
-                getChildAt(i).layout(xy.x, xy.y, xy.x + itemWidth, xy.y + itemHeight);
+                layoutViewToIndex(getChildViewAt(i),i);
             }
         }
     }
 
 
+    int getChildViewCount(){
+        return childViewList.size();
+    }
+
+    View getChildViewAt(int index){
+        return childViewList.get(index);
+    }
+
+    void removeAllChildView(){
+        super.removeAllViews();
+        childViewList.clear();
+    }
+
+
+    void layoutViewToIndex(View view,int index){
+        Point xy = getCoorFromIndex(index);
+        view.layout(xy.x, xy.y, xy.x + itemWidth, xy.y + itemHeight);
+    }
+
+
 	@Override
 	protected int getChildDrawingOrder(int childCount, int i) {
-		//将正在移动的item放在最后一个绘制 防止出现正在移动的item被遮住的问题
+        //将正在移动的item放在最后一个绘制 防止出现正在移动的item被遮住的问题
 		if (draggedIndex == -1){
 			return i;
 		} else if (i == childCount - 1){
@@ -135,7 +184,7 @@ public class DraggableGridView extends ViewGroup implements View.OnTouchListener
 			return -1;
 		}
 		int index = row * colCount + col;
-		if (index >= getChildCount()){
+		if (index >= getChildViewCount()){
 			return -1;
 		}
 		return index;
@@ -175,8 +224,8 @@ public class DraggableGridView extends ViewGroup implements View.OnTouchListener
 		}
 		int target = getIndexFromCoor(x, y);
 		//将item移动到最后的item之后
-		if (target == getChildCount()) {
-			target = getChildCount() - 1;
+		if (target == getChildViewCount()) {
+			target = getChildViewCount() - 1;
 		}
 		return target;
 	}
@@ -195,7 +244,7 @@ public class DraggableGridView extends ViewGroup implements View.OnTouchListener
 		}
 
 		if (onItemClickListener != null && getIndex() != -1) {
-			onItemClickListener.onItemClick(null, getChildAt(getIndex()), getIndex(), getIndex() / colCount);
+			onItemClickListener.onItemClick(null, getChildViewAt(getIndex()), getIndex(), getIndex() / colCount);
 		}
 	}
 
@@ -238,7 +287,7 @@ public class DraggableGridView extends ViewGroup implements View.OnTouchListener
 
 
 	public boolean onTouch(View view, MotionEvent event) {
-        Log.i(TAG,"onTouch -- > MotionEvent : "+event);
+        Log.i(TAG, "onTouch -- > MotionEvent : " + event);
 
 		int action = event.getAction();
 		switch (action) {
@@ -254,8 +303,8 @@ public class DraggableGridView extends ViewGroup implements View.OnTouchListener
 				int deltaY = (int) event.getY() - lastY;
 				if (draggedIndex != -1) {
 					int x = (int) event.getX(), y = (int) event.getY();
-					View draggedView = getChildAt(draggedIndex);
-					int itemLeft = draggedView.getLeft(), itemTop = draggedView.getTop();
+					View draggedView = getChildViewAt(draggedIndex);
+                    int itemLeft = draggedView.getLeft(), itemTop = draggedView.getTop();
 					draggedView.layout(itemLeft + deltaX, itemTop + deltaY, itemLeft + deltaX + itemWidth, itemTop + deltaY + itemHeight);
 					//得到当前点击位置所在的item的index
 					int targetIndex = getTargetFromCoor(x, y);
@@ -263,6 +312,8 @@ public class DraggableGridView extends ViewGroup implements View.OnTouchListener
 						animateGap(targetIndex);
 						lastTargetIndex = targetIndex;
 					}
+
+                    moveIndicatorViewToIndex(targetIndex);
 				}
 				lastX = (int) event.getX();
 				lastY = (int) event.getY();
@@ -272,7 +323,7 @@ public class DraggableGridView extends ViewGroup implements View.OnTouchListener
 					//如果存在item交换 则重新排列子view
 					if (lastTargetIndex != -1) {
 						reorderChildren();
-					}
+                    }
 					animateActionUp();
 					lastTargetIndex = -1;
 					draggedIndex = -1;
@@ -284,7 +335,7 @@ public class DraggableGridView extends ViewGroup implements View.OnTouchListener
 			Log.e(TAG, "onTouch -- > return : "+true);
             return true;
 		}
-        Log.i(TAG,"onTouch -- > return : "+false);
+        Log.i(TAG, "onTouch -- > return : " + false);
 		return false;
 	}
 
@@ -292,7 +343,7 @@ public class DraggableGridView extends ViewGroup implements View.OnTouchListener
 	 * actionDown动画
 	 */
 	private void animateActionDown() {
-		View v = getChildAt(draggedIndex);
+		View v = getChildViewAt(draggedIndex);
 		AnimationSet animSet = new AnimationSet(true);
 		AlphaAnimation alpha = new AlphaAnimation(1, .5f);
 		alpha.setDuration(ANIM_DURATION);
@@ -307,8 +358,8 @@ public class DraggableGridView extends ViewGroup implements View.OnTouchListener
 	 * actionUp动画
 	 */
 	private void animateActionUp() {
-		View v = getChildAt(draggedIndex);
-		AlphaAnimation alpha = new AlphaAnimation(.5f, 1);
+		View v = getChildViewAt(draggedIndex);
+        AlphaAnimation alpha = new AlphaAnimation(.5f, 1);
 		alpha.setDuration(ANIM_DURATION);
 		AnimationSet animSet = new AnimationSet(true);
 		animSet.addAnimation(alpha);
@@ -324,9 +375,9 @@ public class DraggableGridView extends ViewGroup implements View.OnTouchListener
 	 * @param targetIndex
 	 */
 	private void animateGap(int targetIndex) {
-		for (int i = 0; i < getChildCount(); i++) {
-			View v = getChildAt(i);
-			if (i == draggedIndex)
+		for (int i = 0; i < getChildViewCount(); i++) {
+			View v = getChildViewAt(i);
+            if (i == draggedIndex)
 				continue;
 			int newPos = i;
 			if (draggedIndex < targetIndex && i >= draggedIndex + 1 && i <= targetIndex)
@@ -366,32 +417,32 @@ public class DraggableGridView extends ViewGroup implements View.OnTouchListener
 			onRearrangeListener.onRearrange(draggedIndex, lastTargetIndex);
 		}
 		ArrayList<View> children = new ArrayList<View>();
-		for (int i = 0; i < getChildCount(); i++) {
-			getChildAt(i).clearAnimation();
-			children.add(getChildAt(i));
+		for (int i = 0; i < getChildViewCount(); i++) {
+            getChildViewAt(i).clearAnimation();
+			children.add(getChildViewAt(i));
 		}
-		removeAllViews();
-		while (draggedIndex != lastTargetIndex)
-			if (lastTargetIndex == children.size()) {
-				// dragged and dropped to the right of the last element
-				children.add(children.remove(draggedIndex));
-				draggedIndex = lastTargetIndex;
-			} else if (draggedIndex < lastTargetIndex) {
-				// shift to the right
-				Collections.swap(children, draggedIndex, draggedIndex + 1);
-				draggedIndex++;
-			}
-			else if (draggedIndex > lastTargetIndex) {
-				// shift to the left
-				Collections.swap(children, draggedIndex, draggedIndex - 1);
-				draggedIndex--;
-			}
+		removeAllChildView();
+		while (draggedIndex != lastTargetIndex) {
+            if (lastTargetIndex == children.size()) {
+                // dragged and dropped to the right of the last element
+                children.add(children.remove(draggedIndex));
+                draggedIndex = lastTargetIndex;
+            } else if (draggedIndex < lastTargetIndex) {
+                // shift to the right
+                Collections.swap(children, draggedIndex, draggedIndex + 1);
+                draggedIndex++;
+            } else if (draggedIndex > lastTargetIndex) {
+                // shift to the left
+                Collections.swap(children, draggedIndex, draggedIndex - 1);
+                draggedIndex--;
+            }
+        }
 		for (int i = 0; i < children.size(); i++) {
 			newPositions.set(i, -1);
 			addView(children.get(i));
 		}
 //		onLayout(true, getLeft(), getTop(), getRight(), getBottom());
-        layoutChilden(getLeft(), getRight());
+        layoutChildren(getLeft(), getRight());
 	}
 
 	/**

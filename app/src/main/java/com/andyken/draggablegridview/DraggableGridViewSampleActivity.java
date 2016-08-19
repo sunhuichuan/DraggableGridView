@@ -44,7 +44,13 @@ public class DraggableGridViewSampleActivity extends Activity {
 
 	private void initViews() {
 
-		for (int i=0;i<20;i++){
+
+//        Bitmap bitmap = getIndicatorThumb("啥啥啥");
+//        ImageView indicator = new ImageView(DraggableGridViewSampleActivity.this);
+//        indicator.setImageBitmap(bitmap);
+//        dgv.addIndicatorView(indicator);
+
+        for (int i=0;i<20;i++){
 
 			String word = words[random.nextInt(words.length)];
 			ImageView view = new ImageView(DraggableGridViewSampleActivity.this);
@@ -80,20 +86,39 @@ public class DraggableGridViewSampleActivity extends Activity {
 			}
 		});
     }
-    
+
     private Bitmap getThumb(String s){
-		Bitmap bmp = Bitmap.createBitmap(150, 150, Bitmap.Config.RGB_565);
-		Canvas canvas = new Canvas(bmp);
-	    Paint paint = new Paint();
-	    
-	    paint.setColor(Color.rgb(random.nextInt(128), random.nextInt(128), random.nextInt(128)));
-	    paint.setTextSize(24);
-	    paint.setFlags(Paint.ANTI_ALIAS_FLAG);
-	    canvas.drawRect(new Rect(0, 0, 150, 150), paint);
-	    paint.setColor(Color.WHITE);
-	    paint.setTextAlign(Paint.Align.CENTER);
-	    canvas.drawText(s, 75, 75, paint);
-	    
-		return bmp;
-	}
+        Bitmap bmp = Bitmap.createBitmap(150, 150, Bitmap.Config.RGB_565);
+        Canvas canvas = new Canvas(bmp);
+        Paint paint = new Paint();
+
+        paint.setColor(Color.rgb(random.nextInt(128), random.nextInt(128), random.nextInt(128)));
+        paint.setTextSize(24);
+        paint.setFlags(Paint.ANTI_ALIAS_FLAG);
+        canvas.drawRect(new Rect(0, 0, 150, 150), paint);
+        paint.setColor(Color.WHITE);
+        paint.setTextAlign(Paint.Align.CENTER);
+        canvas.drawText(s, 75, 75, paint);
+
+        return bmp;
+    }
+
+    private Bitmap getIndicatorThumb(String s){
+        Bitmap bmp = Bitmap.createBitmap(150, 150, Bitmap.Config.RGB_565);
+        Canvas canvas = new Canvas(bmp);
+        Paint paint = new Paint();
+
+        paint.setColor(Color.WHITE);
+        paint.setTextSize(24);
+        paint.setFlags(Paint.ANTI_ALIAS_FLAG);
+        canvas.drawRect(new Rect(0, 0, 150, 150), paint);
+        paint.setColor(Color.RED);
+        paint.setTextAlign(Paint.Align.CENTER);
+        canvas.drawText(s, 75, 75, paint);
+
+        return bmp;
+    }
+
+
+
 }
