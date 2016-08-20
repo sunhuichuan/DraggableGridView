@@ -99,14 +99,14 @@ public class DraggableGridView extends ViewGroup implements View.OnTouchListener
             //没有indicator,啥也不做
             return;
         }
-
-        if (mIndicatorIndex == index){
-            //啥也不做
-            return;
-        }
-        mIndicatorIndex = index;
+		if (index==-1 || mIndicatorIndex == index){
+			//index无效，或者index和当前位置一样，就保持当前位置啥也不做
+			return;
+		}
 
         layoutViewToIndex(mIndicatorView, index);
+
+        mIndicatorIndex = index;
     }
 
 	@Override
@@ -437,6 +437,11 @@ public class DraggableGridView extends ViewGroup implements View.OnTouchListener
                 draggedIndex--;
             }
         }
+
+
+		//添加indicatorView
+		addIndicatorView(mIndicatorView);
+
 		for (int i = 0; i < children.size(); i++) {
 			newPositions.set(i, -1);
 			addView(children.get(i));

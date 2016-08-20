@@ -45,10 +45,10 @@ public class DraggableGridViewSampleActivity extends Activity {
 	private void initViews() {
 
 
-//        Bitmap bitmap = getIndicatorThumb("啥啥啥");
-//        ImageView indicator = new ImageView(DraggableGridViewSampleActivity.this);
-//        indicator.setImageBitmap(bitmap);
-//        dgv.addIndicatorView(indicator);
+        Bitmap bitmap = getIndicatorThumb("啥啥啥");
+        ImageView indicator = new ImageView(DraggableGridViewSampleActivity.this);
+        indicator.setImageBitmap(bitmap);
+        dgv.addIndicatorView(indicator);
 
         for (int i=0;i<20;i++){
 
