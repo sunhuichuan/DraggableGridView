@@ -2,6 +2,10 @@ package com.andyken.draggablegridview.views;
 
 import android.content.Context;
 import android.content.res.TypedArray;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
 import android.graphics.Point;
 import android.graphics.Rect;
 import android.util.AttributeSet;
@@ -16,6 +20,10 @@ import android.view.animation.Animation;
 import android.view.animation.AnimationSet;
 import android.view.animation.TranslateAnimation;
 import android.widget.AdapterView;
+import android.widget.Button;
+import android.widget.FrameLayout;
+import android.widget.ImageView;
+import android.widget.RelativeLayout;
 import android.widget.ScrollView;
 
 import com.andyken.draggablegridview.R;
@@ -23,12 +31,13 @@ import com.andyken.draggablegridview.R;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Random;
 
 /**
  *
  * Created by andyken on 16/3/22.
  */
-public class DraggableGridView extends ViewGroup implements View.OnTouchListener, View.OnClickListener, View.OnLongClickListener {
+public class DraggableGridView extends FrameLayout implements View.OnTouchListener, View.OnClickListener, View.OnLongClickListener {
     private static final String TAG = "DraggableGridView";
 
     private AttributeSet attributeSet;
@@ -107,6 +116,7 @@ public class DraggableGridView extends ViewGroup implements View.OnTouchListener
 
     //把指示View移动到指定index
     void moveIndicatorViewToIndex(int index) {
+        Log.i(TAG,"moveIndicatorViewToIndex --> "+index);
         if (mIndicatorView == null) {
             //没有indicator,啥也不做
             return;
@@ -137,7 +147,7 @@ public class DraggableGridView extends ViewGroup implements View.OnTouchListener
 
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-//        super.onMeasure(widthMeasureSpec, heightMeasureSpec);
+        super.onMeasure(widthMeasureSpec, heightMeasureSpec);
         if (parentScrollView == null){
             ViewParent parent = getParent();
             if (parent instanceof ScrollView) {
@@ -178,18 +188,23 @@ public class DraggableGridView extends ViewGroup implements View.OnTouchListener
 
     @Override
     public void onLayout(boolean changed, int l, int t, int r, int b) {
+        super.onLayout(changed, l, t, r, b);
 
         if (parentScrollView != null) {
             //父View 在屏幕上的坐标
             parentScrollView.getGlobalVisibleRect(parentRect);
 
         }
-
         Log.i(TAG, "onLayout 父View parentRect ：" + parentRect);
+
         layoutChildren(l, r);
+        //指示View隐藏在第0个位置
+        layoutViewToIndex(mIndicatorView, 0);
+
     }
 
     void layoutChildren(int l, int r) {
+
         xPadding = ((r - l) - (itemWidth * colCount)) / (colCount + 1);
         for (int i = 0; i < getChildViewCount(); i++) {
             if (i != draggedIndex) {
@@ -203,7 +218,7 @@ public class DraggableGridView extends ViewGroup implements View.OnTouchListener
         return childViewList.size();
     }
 
-    View getChildViewAt(int index) {
+    public View getChildViewAt(int index) {
         return childViewList.get(index);
     }
 
@@ -366,7 +381,7 @@ public class DraggableGridView extends ViewGroup implements View.OnTouchListener
             case MotionEvent.ACTION_MOVE:
                 int deltaX = (int) event.getX() - lastX;
                 int deltaY = (int) event.getY() - lastY;
-                Log.i(TAG, "onTouch -- > ACTION_MOVE : " + event.getY() + ",event.getRawY()-->"+event.getRawY());
+//                Log.i(TAG, "onTouch -- > ACTION_MOVE : " + event.getY() + ",event.getRawY()-->"+event.getRawY());
 
 
                 if (draggedIndex != -1) {
@@ -541,6 +556,8 @@ public class DraggableGridView extends ViewGroup implements View.OnTouchListener
         }
 //		onLayout(true, getLeft(), getTop(), getRight(), getBottom());
         layoutChildren(getLeft(), getRight());
+        //指示View隐藏在第0个位置
+        layoutViewToIndex(mIndicatorView, 0);
     }
 
     /**
@@ -560,8 +577,119 @@ public class DraggableGridView extends ViewGroup implements View.OnTouchListener
         this.onItemClickListener = onItemClickListener;
     }
 
+
+
     public interface OnRearrangeListener {
 
         void onRearrange(int oldIndex, int newIndex);
     }
+
+
+    /**
+     * DraggableGridView的ItemView
+     */
+    public static class ItemView extends FrameLayout{
+        Random random = new Random();
+
+        private ImageView view;
+        private Bitmap contentBmp;
+
+        public ItemView(Context context) {
+            this(context, null);
+        }
+
+        public ItemView(Context context, AttributeSet attrs) {
+            super(context, attrs);
+            init(context);
+        }
+
+        void init(Context context){
+            view = new ImageView(context);
+            contentBmp = getThumb();
+            view.setImageBitmap(contentBmp);
+            FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(150, 150);
+            view.setLayoutParams(params);
+            addView(view);
+//            setBackgroundColor(Color.RED);
+
+        }
+
+        public void printInfo(){
+            Log.i(TAG,"imageView : height,width --> "+view.getHeight()+","+view.getWidth());
+        }
+
+
+        private Bitmap getThumb(){
+            Bitmap bmp = Bitmap.createBitmap(150, 150, Bitmap.Config.RGB_565);
+            Canvas canvas = new Canvas(bmp);
+            Paint paint = new Paint();
+
+            paint.setColor(Color.rgb(random.nextInt(128), random.nextInt(128), random.nextInt(128)));
+            paint.setTextSize(24);
+            paint.setFlags(Paint.ANTI_ALIAS_FLAG);
+            canvas.drawRect(new Rect(0, 0, 150, 150), paint);
+            return bmp;
+        }
+
+        //设置文字
+        public void setText(String text){
+            Canvas canvas = new Canvas(contentBmp);
+            Paint paint = new Paint();
+
+            paint.setColor(Color.WHITE);
+            paint.setTextAlign(Paint.Align.CENTER);
+            canvas.drawText(text, 75, 75, paint);
+        }
+
+
+    }
+    /**
+     * DraggableGridView的指示View
+     */
+    public static class IndicatorView extends RelativeLayout{
+
+        private ImageView view;
+        private Bitmap contentBmp;
+
+        public IndicatorView(Context context) {
+            this(context, null);
+        }
+
+        public IndicatorView(Context context, AttributeSet attrs) {
+            super(context, attrs);
+            init(context);
+        }
+
+        void init(Context context){
+            view = new ImageView(context);
+            contentBmp = getIndicatorThumb();
+            view.setImageBitmap(contentBmp);
+            addView(view);
+            setBackgroundColor(Color.CYAN);
+        }
+
+
+        private Bitmap getIndicatorThumb(){
+            Bitmap bmp = Bitmap.createBitmap(150, 150, Bitmap.Config.RGB_565);
+            Canvas canvas = new Canvas(bmp);
+            Paint paint = new Paint();
+
+            paint.setColor(Color.WHITE);
+            paint.setTextSize(24);
+            paint.setFlags(Paint.ANTI_ALIAS_FLAG);
+            canvas.drawRect(new Rect(0, 0, 150, 150), paint);
+            return bmp;
+        }
+
+        public void setText(String text){
+            Canvas canvas = new Canvas(contentBmp);
+            Paint paint = new Paint();
+            paint.setColor(Color.RED);
+            paint.setTextAlign(Paint.Align.CENTER);
+            canvas.drawText(text, 75, 75, paint);
+        }
+
+    }
+
+
 }
