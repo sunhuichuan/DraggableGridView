@@ -298,6 +298,8 @@ public class DraggableGridView extends ViewGroup implements View.OnTouchListener
             //并且要返回true,代表此touch事件被消费了，不再传递
             return true;
         }
+        //请求不允许父类拦截此touch事件
+        requestDisallowInterceptTouchEvent(true);
 
         int index = getIndex();
         if (index != -1) {
@@ -369,15 +371,18 @@ public class DraggableGridView extends ViewGroup implements View.OnTouchListener
                     lastTargetIndex = -1;
                     draggedIndex = -1;
                 }
+                //允许父scrollView拦截自己
+                requestDisallowInterceptTouchEvent(false);
                 break;
         }
         //如果存在拖动item 则消费掉该事件
         if (draggedIndex != -1) {
             Log.e(TAG, "onTouch -- > return : " + true);
             return true;
+        }else{
+            Log.i(TAG, "onTouch -- > return : " + false);
+            return false;
         }
-        Log.i(TAG, "onTouch -- > return : " + false);
-        return false;
     }
 
     /**
