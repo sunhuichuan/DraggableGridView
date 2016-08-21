@@ -636,6 +636,9 @@ public class DraggableGridView extends FrameLayout implements View.OnTouchListen
             Canvas canvas = new Canvas(contentBmp);
             Paint paint = new Paint();
 
+            paint.setTextSize(24);
+            paint.setFlags(Paint.ANTI_ALIAS_FLAG);
+
             paint.setColor(Color.WHITE);
             paint.setTextAlign(Paint.Align.CENTER);
             canvas.drawText(text, 75, 75, paint);
@@ -684,6 +687,10 @@ public class DraggableGridView extends FrameLayout implements View.OnTouchListen
         public void setText(String text){
             Canvas canvas = new Canvas(contentBmp);
             Paint paint = new Paint();
+
+            paint.setTextSize(24);
+            paint.setFlags(Paint.ANTI_ALIAS_FLAG);
+
             paint.setColor(Color.RED);
             paint.setTextAlign(Paint.Align.CENTER);
             canvas.drawText(text, 75, 75, paint);
