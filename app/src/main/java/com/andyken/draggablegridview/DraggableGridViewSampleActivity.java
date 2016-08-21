@@ -13,6 +13,7 @@ import android.view.View.OnClickListener;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.Button;
+import android.widget.GridView;
 import android.widget.ImageView;
 
 import com.andyken.draggablegridview.views.DraggableGridView;
@@ -31,8 +32,9 @@ public class DraggableGridViewSampleActivity extends Activity {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main);
-        
+
         dgv = ((DraggableGridView)findViewById(R.id.vgv));
+//        dgv.setEnabled(false);
         button1 = ((Button)findViewById(R.id.button1));
 
         setListeners();
@@ -55,7 +57,7 @@ public class DraggableGridViewSampleActivity extends Activity {
 			String word = words[random.nextInt(words.length)];
 			ImageView view = new ImageView(DraggableGridViewSampleActivity.this);
 			view.setImageBitmap(getThumb(word));
-			dgv.addView(view);
+			dgv.addChildView(view);
 
 		}
 
@@ -73,7 +75,7 @@ public class DraggableGridViewSampleActivity extends Activity {
 			@Override
 			public void onItemClick(AdapterView<?> arg0, View arg1, int arg2, long arg3) {
 				//一个item被点击
-				dgv.removeViewAt(arg2);
+				dgv.removeChildViewAt(arg2);
 			}
 		});
     	button1.setOnClickListener(new OnClickListener() {
@@ -82,7 +84,7 @@ public class DraggableGridViewSampleActivity extends Activity {
 				String word = words[random.nextInt(words.length)];
 				ImageView view = new ImageView(DraggableGridViewSampleActivity.this);
 				view.setImageBitmap(getThumb(word));
-				dgv.addView(view);
+				dgv.addChildView(view);
 			}
 		});
     }
