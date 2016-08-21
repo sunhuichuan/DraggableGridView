@@ -52,7 +52,7 @@ public class DraggableGridViewSampleActivity extends Activity {
         indicator.setImageBitmap(bitmap);
         dgv.addIndicatorView(indicator);
 
-        for (int i=0;i<20;i++){
+        for (int i=0;i<60;i++){
 
 			String word = words[random.nextInt(words.length)];
 			ImageView view = new ImageView(DraggableGridViewSampleActivity.this);

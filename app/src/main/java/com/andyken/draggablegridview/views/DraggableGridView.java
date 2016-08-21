@@ -3,17 +3,20 @@ package com.andyken.draggablegridview.views;
 import android.content.Context;
 import android.content.res.TypedArray;
 import android.graphics.Point;
+import android.graphics.Rect;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewConfiguration;
 import android.view.ViewGroup;
+import android.view.ViewParent;
 import android.view.animation.AlphaAnimation;
 import android.view.animation.Animation;
 import android.view.animation.AnimationSet;
 import android.view.animation.TranslateAnimation;
 import android.widget.AdapterView;
+import android.widget.ScrollView;
 
 import com.andyken.draggablegridview.R;
 
@@ -22,6 +25,7 @@ import java.util.Collections;
 import java.util.List;
 
 /**
+ *
  * Created by andyken on 16/3/22.
  */
 public class DraggableGridView extends ViewGroup implements View.OnTouchListener, View.OnClickListener, View.OnLongClickListener {
@@ -51,14 +55,23 @@ public class DraggableGridView extends ViewGroup implements View.OnTouchListener
 
     private List<View> childViewList = new ArrayList<>();
 
+    ScrollView parentScrollView;
+    //父View 的 坐标
+    private Rect parentRect = new Rect();
+    //当距离父View底部距离在此返回，向上滚动
+    private int TOUCH_SPACE = 0;
+
+
     public DraggableGridView(Context context, AttributeSet attributeSet) {
         super(context, attributeSet);
         this.attributeSet = attributeSet;
         touchSlop = ViewConfiguration.get(context).getScaledTouchSlop();
+        TOUCH_SPACE = 400;
         init();
     }
 
     private void init() {
+
         initAttributes();
         initData();
         initEventListener();
@@ -122,11 +135,15 @@ public class DraggableGridView extends ViewGroup implements View.OnTouchListener
     }
 
 
-
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
 //        super.onMeasure(widthMeasureSpec, heightMeasureSpec);
-
+        if (parentScrollView == null){
+            ViewParent parent = getParent();
+            if (parent instanceof ScrollView) {
+                parentScrollView = (ScrollView) parent;
+            }
+        }
 
 
         int widthMode = MeasureSpec.getMode(widthMeasureSpec);
@@ -152,18 +169,23 @@ public class DraggableGridView extends ViewGroup implements View.OnTouchListener
         int col = size % colCount;
         int row = size / colCount;
         //当有余数，则加1行
-        row = row + (col>0?1:0);
+        row = row + (col > 0 ? 1 : 0);
 
         int height = yPadding + (itemHeight + yPadding) * row;
         return height;
     }
 
 
-
-
-
     @Override
     public void onLayout(boolean changed, int l, int t, int r, int b) {
+
+        if (parentScrollView != null) {
+            //父View 在屏幕上的坐标
+            parentScrollView.getGlobalVisibleRect(parentRect);
+
+        }
+
+        Log.i(TAG, "onLayout 父View parentRect ：" + parentRect);
         layoutChildren(l, r);
     }
 
@@ -330,7 +352,7 @@ public class DraggableGridView extends ViewGroup implements View.OnTouchListener
 
 
     public boolean onTouch(View view, MotionEvent event) {
-        Log.i(TAG, "onTouch -- > MotionEvent : " + event);
+//        Log.i(TAG, "onTouch -- > MotionEvent : " + event);
 
         int action = event.getAction();
         switch (action) {
@@ -344,6 +366,9 @@ public class DraggableGridView extends ViewGroup implements View.OnTouchListener
             case MotionEvent.ACTION_MOVE:
                 int deltaX = (int) event.getX() - lastX;
                 int deltaY = (int) event.getY() - lastY;
+                Log.i(TAG, "onTouch -- > ACTION_MOVE : " + event.getY() + ",event.getRawY()-->"+event.getRawY());
+
+
                 if (draggedIndex != -1) {
                     int x = (int) event.getX(), y = (int) event.getY();
                     View draggedView = getChildViewAt(draggedIndex);
@@ -356,8 +381,29 @@ public class DraggableGridView extends ViewGroup implements View.OnTouchListener
                         lastTargetIndex = targetIndex;
                     }
 
+                    //移动指示View
                     moveIndicatorViewToIndex(targetIndex);
+//                    Log.i(TAG, "deltaY : " + deltaY);
+                    if (parentScrollView != null) {
+//                        int rawX = Math.round(event.getRawX());
+                        int rawY = Math.round(event.getRawY());
+                        //滚动的慢一点
+                        float ratio = 0.8f;
+
+                        //父View向上滚动
+                        if (((parentRect.bottom - rawY) < TOUCH_SPACE) && deltaY > 0) {
+                            //滚动到底部了 并且 还是向下滚动
+                            //滚动ScrollView
+                            parentScrollView.scrollBy(0, Math.round(deltaY * ratio));
+
+                        } else if ((rawY-parentRect.top) < TOUCH_SPACE && deltaY < 0) {
+                            //滚动到顶部 并且还是向上滚动
+                            parentScrollView.scrollBy(0, Math.round(deltaY * ratio));
+                        }
+                    }
+
                 }
+
                 lastX = (int) event.getX();
                 lastY = (int) event.getY();
                 break;
@@ -377,10 +423,10 @@ public class DraggableGridView extends ViewGroup implements View.OnTouchListener
         }
         //如果存在拖动item 则消费掉该事件
         if (draggedIndex != -1) {
-            Log.e(TAG, "onTouch -- > return : " + true);
+//            Log.e(TAG, "onTouch -- > return : " + true);
             return true;
-        }else{
-            Log.i(TAG, "onTouch -- > return : " + false);
+        } else {
+//            Log.i(TAG, "onTouch -- > return : " + false);
             return false;
         }
     }
