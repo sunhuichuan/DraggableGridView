@@ -63,8 +63,7 @@ public class DraggableGridViewSampleActivity extends Activity {
 
 	}
 
-	private void setListeners()
-    {
+	private void setListeners() {
     	dgv.setOnRearrangeListener(new DraggableGridView.OnRearrangeListener() {
 			public void onRearrange(int oldIndex, int newIndex) {
 				//当一个item位置被改动

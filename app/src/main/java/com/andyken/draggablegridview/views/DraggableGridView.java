@@ -135,7 +135,7 @@ public class DraggableGridView extends ViewGroup implements View.OnTouchListener
         int heightSize = MeasureSpec.getSize(heightMeasureSpec);
 
         int width = widthSize;
-        int height = Math.round(1920 * 0.5f);
+        int height = getMaxHeight();
 
         Log.i(TAG, "onMeasure --> widthMode,heightMode : " + widthMode + "," + heightMode + ":::widthSize,heightSize : " + widthSize + "," + heightSize);
 
@@ -145,7 +145,18 @@ public class DraggableGridView extends ViewGroup implements View.OnTouchListener
     }
 
 
+    private int getMaxHeight() {
 
+        int size = childViewList.size();
+
+        int col = size % colCount;
+        int row = size / colCount;
+        //当有余数，则加1行
+        row = row + (col>0?1:0);
+
+        int height = yPadding + (itemHeight + yPadding) * row;
+        return height;
+    }
 
 
 
