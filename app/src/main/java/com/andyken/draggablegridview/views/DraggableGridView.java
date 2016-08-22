@@ -10,6 +10,7 @@ import android.graphics.Point;
 import android.graphics.Rect;
 import android.util.AttributeSet;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewConfiguration;
@@ -25,6 +26,7 @@ import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.RelativeLayout;
 import android.widget.ScrollView;
+import android.widget.TextView;
 
 import com.andyken.draggablegridview.R;
 
@@ -75,7 +77,7 @@ public class DraggableGridView extends FrameLayout implements View.OnTouchListen
         super(context, attributeSet);
         this.attributeSet = attributeSet;
         touchSlop = ViewConfiguration.get(context).getScaledTouchSlop();
-        TOUCH_SPACE = 400;
+        TOUCH_SPACE = dip2px(context,150f);
         init();
     }
 
@@ -337,6 +339,8 @@ public class DraggableGridView extends FrameLayout implements View.OnTouchListen
         }
         //请求不允许父类拦截此touch事件
         requestDisallowInterceptTouchEvent(true);
+        //修改为可移动状态
+        changeItemViewToMoveable();
 
         int index = getIndex();
         if (index != -1) {
@@ -347,6 +351,21 @@ public class DraggableGridView extends FrameLayout implements View.OnTouchListen
         }
         return false;
     }
+
+
+    void changeItemViewToMoveable(){
+        for (int i=0,size=childViewList.size();i<size;i++){
+            ItemView view = (ItemView) childViewList.get(i);
+            view.setStateMoveable();
+        }
+    }
+    void changeItemViewToNormal(){
+        for (int i=0,size=childViewList.size();i<size;i++){
+            ItemView view = (ItemView) childViewList.get(i);
+            view.setStateNormal();
+        }
+    }
+
 
 
     /**
@@ -434,6 +453,7 @@ public class DraggableGridView extends FrameLayout implements View.OnTouchListen
                 }
                 //允许父scrollView拦截自己
                 requestDisallowInterceptTouchEvent(false);
+                changeItemViewToNormal();
                 break;
         }
         //如果存在拖动item 则消费掉该事件
@@ -585,14 +605,24 @@ public class DraggableGridView extends FrameLayout implements View.OnTouchListen
     }
 
 
+    public static int dip2px(Context context, float dipValue){
+        final float scale = context.getResources().getDisplayMetrics().density;
+        return (int)(dipValue * scale + 0.5f);
+    }
+
     /**
      * DraggableGridView的ItemView
      */
     public static class ItemView extends FrameLayout{
-        Random random = new Random();
 
-        private ImageView view;
-        private Bitmap contentBmp;
+
+        //item正常颜色
+        final String ITEM_COLOR_NORMAL = "#666666";
+        //item可移动时颜色
+        final String ITEM_COLOR_MOVEABLE = "#6688ee";
+
+        private ImageView iv_color_view;
+        private TextView tv_text_view;
 
         public ItemView(Context context) {
             this(context, null);
@@ -604,44 +634,32 @@ public class DraggableGridView extends FrameLayout implements View.OnTouchListen
         }
 
         void init(Context context){
-            view = new ImageView(context);
-            contentBmp = getThumb();
-            view.setImageBitmap(contentBmp);
-            FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(150, 150);
-            view.setLayoutParams(params);
-            addView(view);
+            iv_color_view = new ImageView(context);
+            iv_color_view.setBackgroundColor(Color.parseColor(ITEM_COLOR_NORMAL));
+            FrameLayout.LayoutParams iv_params = new FrameLayout.LayoutParams(150, 150);
+            iv_color_view.setLayoutParams(iv_params);
+            addView(iv_color_view);
+
+            tv_text_view = new TextView(context);
+            tv_text_view.setGravity(Gravity.CENTER);
+            tv_text_view.setTextColor(Color.WHITE);
+            FrameLayout.LayoutParams tv_params = new FrameLayout.LayoutParams(150, 150);
+            addView(tv_text_view,tv_params);
+
 //            setBackgroundColor(Color.RED);
 
         }
 
-        public void printInfo(){
-            Log.i(TAG,"imageView : height,width --> "+view.getHeight()+","+view.getWidth());
+        public void setStateMoveable(){
+            iv_color_view.setBackgroundColor(Color.parseColor(ITEM_COLOR_MOVEABLE));
         }
-
-
-        private Bitmap getThumb(){
-            Bitmap bmp = Bitmap.createBitmap(150, 150, Bitmap.Config.RGB_565);
-            Canvas canvas = new Canvas(bmp);
-            Paint paint = new Paint();
-
-            paint.setColor(Color.rgb(random.nextInt(128), random.nextInt(128), random.nextInt(128)));
-            paint.setTextSize(24);
-            paint.setFlags(Paint.ANTI_ALIAS_FLAG);
-            canvas.drawRect(new Rect(0, 0, 150, 150), paint);
-            return bmp;
+        public void setStateNormal(){
+            iv_color_view.setBackgroundColor(Color.parseColor(ITEM_COLOR_NORMAL));
         }
 
         //设置文字
         public void setText(String text){
-            Canvas canvas = new Canvas(contentBmp);
-            Paint paint = new Paint();
-
-            paint.setTextSize(24);
-            paint.setFlags(Paint.ANTI_ALIAS_FLAG);
-
-            paint.setColor(Color.WHITE);
-            paint.setTextAlign(Paint.Align.CENTER);
-            canvas.drawText(text, 75, 75, paint);
+            tv_text_view.setText(text);
         }
 
 

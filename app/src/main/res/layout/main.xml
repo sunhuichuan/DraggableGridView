@@ -14,7 +14,7 @@
             android:layout_height="wrap_content"
             android:background="#3300ff00"
             app:colCount="5"
-            app:itemHeight="80dp"
+            app:itemHeight="60dp"
             app:itemWidth="60dp" />
     </ScrollView>
 
