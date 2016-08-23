@@ -51,7 +51,7 @@ public class DraggableGridViewSampleActivity extends Activity {
         indicator.setText("啥啥啥");
         dgv.addIndicatorView(indicator);
 
-        for (int i=0;i<60;i++){
+        for (int i=0;i<30;i++){
 
 			String word = words[random.nextInt(words.length)];
 			DraggableGridView.ItemView view = new DraggableGridView.ItemView(DraggableGridViewSampleActivity.this);

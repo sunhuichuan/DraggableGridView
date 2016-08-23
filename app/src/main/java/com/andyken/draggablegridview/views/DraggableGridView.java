@@ -5,9 +5,12 @@ import android.content.res.TypedArray;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.DashPathEffect;
 import android.graphics.Paint;
+import android.graphics.PathEffect;
 import android.graphics.Point;
 import android.graphics.Rect;
+import android.graphics.RectF;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.Gravity;
@@ -21,7 +24,6 @@ import android.view.animation.Animation;
 import android.view.animation.AnimationSet;
 import android.view.animation.TranslateAnimation;
 import android.widget.AdapterView;
-import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.RelativeLayout;
@@ -33,7 +35,6 @@ import com.andyken.draggablegridview.R;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Random;
 
 /**
  *
@@ -615,13 +616,15 @@ public class DraggableGridView extends FrameLayout implements View.OnTouchListen
      */
     public static class ItemView extends FrameLayout{
 
+        private final float ROUND;
+        //虚线的间隔
+        private int LINE_SPACE;
+        private int LINE_WIDTH;
+        private Paint mPaint = new Paint();
 
-        //item正常颜色
-        final String ITEM_COLOR_NORMAL = "#666666";
-        //item可移动时颜色
-        final String ITEM_COLOR_MOVEABLE = "#6688ee";
+        private RectF mRectF = new RectF();
 
-        private ImageView iv_color_view;
+
         private TextView tv_text_view;
 
         public ItemView(Context context) {
@@ -630,32 +633,35 @@ public class DraggableGridView extends FrameLayout implements View.OnTouchListen
 
         public ItemView(Context context, AttributeSet attrs) {
             super(context, attrs);
+            //因为没有设置背景色，不调用此方法，不会执行onDraw
+            setWillNotDraw(false);
+            mPaint.setColor(Color.RED);
+            ROUND = dip2px(context,10f);
+            LINE_SPACE = dip2px(context,4);
+            LINE_WIDTH = dip2px(context,1);
             init(context);
         }
 
         void init(Context context){
-            iv_color_view = new ImageView(context);
-            iv_color_view.setBackgroundColor(Color.parseColor(ITEM_COLOR_NORMAL));
-            FrameLayout.LayoutParams iv_params = new FrameLayout.LayoutParams(150, 150);
-            iv_color_view.setLayoutParams(iv_params);
-            addView(iv_color_view);
 
             tv_text_view = new TextView(context);
             tv_text_view.setGravity(Gravity.CENTER);
             tv_text_view.setTextColor(Color.WHITE);
             FrameLayout.LayoutParams tv_params = new FrameLayout.LayoutParams(150, 150);
-            addView(tv_text_view,tv_params);
+            addView(tv_text_view);
+//            addView(tv_text_view, tv_params);
 
 //            setBackgroundColor(Color.RED);
 
         }
 
         public void setStateMoveable(){
-            iv_color_view.setBackgroundColor(Color.parseColor(ITEM_COLOR_MOVEABLE));
+//            setBackgroundColor(Color.parseColor(ITEM_COLOR_MOVEABLE));
         }
         public void setStateNormal(){
-            iv_color_view.setBackgroundColor(Color.parseColor(ITEM_COLOR_NORMAL));
+//            setBackgroundColor(Color.parseColor(ITEM_COLOR_NORMAL));
         }
+
 
         //设置文字
         public void setText(String text){
@@ -663,14 +669,70 @@ public class DraggableGridView extends FrameLayout implements View.OnTouchListen
         }
 
 
+        @Override
+        protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
+            super.onLayout(changed, left, top, right, bottom);
+//            mRectF.set(left, top, right, bottom);
+            Log.i(TAG, "left,top,right,bottom:" + left + "," + top + "," + right + "," + bottom);
+
+        }
+
+        @Override
+        protected void onSizeChanged(int w, int h, int oldw, int oldh) {
+            super.onSizeChanged(w, h, oldw, oldh);
+            int left = LINE_WIDTH;
+            int top = LINE_WIDTH;
+            int right = w - LINE_WIDTH;
+            int bottom = h - LINE_WIDTH;
+            //把虚线的宽度考虑进去
+            mRectF.set(left,top,right,bottom);
+            resetTextParams(w, h);
+        }
+
+
+        void resetTextParams(int w, int h){
+            FrameLayout.LayoutParams params = (LayoutParams) tv_text_view.getLayoutParams();
+            params.width = w;
+            params.height = h;
+            tv_text_view.setLayoutParams(params);
+        }
+
+        @Override
+        protected void onDraw(Canvas canvas) {
+            super.onDraw(canvas);
+
+            canvas.drawRoundRect(mRectF, ROUND, ROUND, mPaint);
+
+            drawLine(canvas);
+
+
+        }
+
+
+        protected void drawLine(Canvas canvas){
+
+            Paint p = new Paint();
+            p.setFlags(Paint.ANTI_ALIAS_FLAG);
+            p.setStyle(Paint.Style.STROKE);
+            p.setColor(Color.WHITE);
+            p.setStrokeWidth(LINE_WIDTH);
+            PathEffect effects = new DashPathEffect(new float[] { LINE_SPACE,LINE_SPACE}, 1);
+            p.setPathEffect(effects);
+
+            //画一个圆虚线
+//            canvas.drawRoundRect(mRectF, ROUND,ROUND,p);
+            canvas.drawRoundRect(mRectF,ROUND,ROUND,p);
+        }
+
+
+
+
     }
     /**
      * DraggableGridView的指示View
      */
-    public static class IndicatorView extends RelativeLayout{
+    public static class IndicatorView extends ItemView{
 
-        private ImageView view;
-        private Bitmap contentBmp;
 
         public IndicatorView(Context context) {
             this(context, null);
@@ -678,42 +740,15 @@ public class DraggableGridView extends FrameLayout implements View.OnTouchListen
 
         public IndicatorView(Context context, AttributeSet attrs) {
             super(context, attrs);
-            init(context);
-        }
-
-        void init(Context context){
-            view = new ImageView(context);
-            contentBmp = getIndicatorThumb();
-            view.setImageBitmap(contentBmp);
-            addView(view);
-            setBackgroundColor(Color.CYAN);
         }
 
 
-        private Bitmap getIndicatorThumb(){
-            Bitmap bmp = Bitmap.createBitmap(150, 150, Bitmap.Config.RGB_565);
-            Canvas canvas = new Canvas(bmp);
-            Paint paint = new Paint();
-
-            paint.setColor(Color.WHITE);
-            paint.setTextSize(24);
-            paint.setFlags(Paint.ANTI_ALIAS_FLAG);
-            canvas.drawRect(new Rect(0, 0, 150, 150), paint);
-            return bmp;
+        @Override
+        protected void onDraw(Canvas canvas) {
+//            super.onDraw(canvas);
+            //只画一个虚线
+            drawLine(canvas);
         }
-
-        public void setText(String text){
-            Canvas canvas = new Canvas(contentBmp);
-            Paint paint = new Paint();
-
-            paint.setTextSize(24);
-            paint.setFlags(Paint.ANTI_ALIAS_FLAG);
-
-            paint.setColor(Color.RED);
-            paint.setTextAlign(Paint.Align.CENTER);
-            canvas.drawText(text, 75, 75, paint);
-        }
-
     }
 
 
