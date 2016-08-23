@@ -1,6 +1,10 @@
 package com.andyken.draggablegridview.views;
 
 import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
+import android.animation.ObjectAnimator;
+import android.animation.PropertyValuesHolder;
+import android.animation.ValueAnimator;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -17,11 +21,6 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewConfiguration;
 import android.view.ViewParent;
-import android.view.animation.AlphaAnimation;
-import android.view.animation.Animation;
-import android.view.animation.AnimationSet;
-import android.view.animation.ScaleAnimation;
-import android.view.animation.TranslateAnimation;
 import android.widget.AdapterView;
 import android.widget.FrameLayout;
 import android.widget.ScrollView;
@@ -43,8 +42,6 @@ public class DraggableGridView extends FrameLayout implements View.OnTouchListen
     private int draggedIndex = -1, lastX = -1, lastY = -1, lastTargetIndex = -1;
     private int xPadding, yPadding;//the x-axis and y-axis padding of the item
     private int itemWidth, itemHeight, colCount;
-    //所有子View的index？
-    private ArrayList<Integer> newPositions = new ArrayList<Integer>();
     private static int ANIM_DURATION = 150;
 
     private AdapterView.OnItemClickListener onItemClickListener;
@@ -59,7 +56,7 @@ public class DraggableGridView extends FrameLayout implements View.OnTouchListen
     //指示移动的View落点的View
     private View mIndicatorView;
 
-    private List<View> childViewList = new ArrayList<>();
+    private List<ItemView> childViewList = new ArrayList<>();
 
     ScrollView parentScrollView;
     //父View 的 坐标
@@ -111,7 +108,7 @@ public class DraggableGridView extends FrameLayout implements View.OnTouchListen
 
     //把指示View移动到指定index
     void moveIndicatorViewToIndex(int index) {
-        Log.i(TAG,"moveIndicatorViewToIndex --> "+index);
+//        Log.i(TAG, "moveIndicatorViewToIndex --> " + index);
         if (mIndicatorView == null) {
             //没有indicator,啥也不做
             return;
@@ -126,17 +123,15 @@ public class DraggableGridView extends FrameLayout implements View.OnTouchListen
         mIndicatorIndex = index;
     }
 
-    public void addChildView(View child) {
+    public void addChildView(ItemView child) {
         super.addView(child);
         childViewList.add(child);
-        newPositions.add(-1);
     }
 
     //删除View
     public void removeChildViewAt(int index) {
         View remove = childViewList.remove(index);
         super.removeView(remove);
-        newPositions.remove(index);
     }
 
 
@@ -203,9 +198,9 @@ public class DraggableGridView extends FrameLayout implements View.OnTouchListen
         itemWidth = (width - (colCount + 1)*xPadding)/colCount;
 //        xPadding = (width - (itemWidth * colCount)) / (colCount + 1);
         for (int i = 0; i < getChildViewCount(); i++) {
-            if (i != draggedIndex) {
+//            if (i != draggedIndex) {
                 layoutViewToIndex(getChildViewAt(i), i);
-            }
+//            }
         }
     }
 
@@ -214,7 +209,7 @@ public class DraggableGridView extends FrameLayout implements View.OnTouchListen
         return childViewList.size();
     }
 
-    public View getChildViewAt(int index) {
+    public ItemView getChildViewAt(int index) {
         return childViewList.get(index);
     }
 
@@ -350,7 +345,7 @@ public class DraggableGridView extends FrameLayout implements View.OnTouchListen
     void changeItemViewToMoveable(){
         for (int i=0,size=childViewList.size();i<size;i++){
             ItemView view = (ItemView) childViewList.get(i);
-            view.setStateMoveable();
+            view.setStateMovable();
         }
     }
     void changeItemViewToNormal(){
@@ -392,27 +387,33 @@ public class DraggableGridView extends FrameLayout implements View.OnTouchListen
                 touchDownY = lastY;
                 break;
             case MotionEvent.ACTION_MOVE:
-                int deltaX = (int) event.getX() - lastX;
-                int deltaY = (int) event.getY() - lastY;
-//                Log.i(TAG, "onTouch -- > ACTION_MOVE : " + event.getY() + ",event.getRawY()-->"+event.getRawY());
+                int x = (int) event.getX(), y = (int) event.getY();
+                int deltaX = x - lastX;
+                int deltaY = y - lastY;
+
 
 
                 if (draggedIndex != -1) {
-                    int x = (int) event.getX(), y = (int) event.getY();
                     View draggedView = getChildViewAt(draggedIndex);
                     int itemLeft = draggedView.getLeft(), itemTop = draggedView.getTop();
                     draggedView.layout(itemLeft + deltaX, itemTop + deltaY, itemLeft + deltaX + itemWidth, itemTop + deltaY + itemHeight);
-                    //得到当前点击位置所在的item的index
+//                    draggedView.layout(x, y, x + itemWidth, y + itemHeight);
+                    //得到当前移动位置所在的item的index
                     int targetIndex = getTargetFromCoor(x, y);
                     if (lastTargetIndex != targetIndex && targetIndex != -1) {
                         animateGap(targetIndex);
                         lastTargetIndex = targetIndex;
                     }
 
+
+                    Log.i(TAG, "item onTouch -- > x : " + x + ",y-->"+y+"-------- deltaX:"+deltaX+",deltaY:"+deltaY);
+                    Log.i(TAG,"itemLeft + deltaX, itemTop + deltaY --> "+(itemLeft + deltaX)+","+(itemTop + deltaY));
+
                     //移动指示View
                     moveIndicatorViewToIndex(targetIndex);
 //                    Log.i(TAG, "deltaY : " + deltaY);
                     if (parentScrollView != null) {
+                        //滚动外部ScrollView,方便频道过多时可以上下滚动
 //                        int rawX = Math.round(event.getRawX());
                         int rawY = Math.round(event.getRawY());
                         //滚动的慢一点
@@ -437,11 +438,15 @@ public class DraggableGridView extends FrameLayout implements View.OnTouchListen
                 break;
             case MotionEvent.ACTION_UP:
                 if (draggedIndex != -1) {
+
+                    Log.e(TAG,"itemLeft, itemTop --> "+(childViewList.get(draggedIndex).getLeft()+","+(childViewList.get(draggedIndex).getTop())));
+
+                    animateActionUp();
                     //如果存在item交换 则重新排列子view
                     if (lastTargetIndex != -1) {
-                        reorderChildren();
+//                        reorderChildren();
+                        reorderChildrenItem();
                     }
-                    animateActionUp();
                     lastTargetIndex = -1;
                     draggedIndex = -1;
                 }
@@ -465,29 +470,42 @@ public class DraggableGridView extends FrameLayout implements View.OnTouchListen
      */
     private void animateActionDown() {
         View v = getChildViewAt(draggedIndex);
-        AnimationSet animSet = new AnimationSet(true);
-        AlphaAnimation alpha = new AlphaAnimation(1, .5f);
+
+        PropertyValuesHolder pvhScaleX = PropertyValuesHolder.ofFloat("scaleX", 1, 1.2f);
+        PropertyValuesHolder pvhScaleY = PropertyValuesHolder.ofFloat("scaleY", 1, 1.2f);
+
+        ValueAnimator alpha = ObjectAnimator.ofPropertyValuesHolder(v,pvhScaleX, pvhScaleY);
         alpha.setDuration(ANIM_DURATION);
-        animSet.addAnimation(alpha);
-        animSet.setFillEnabled(true);
-        animSet.setFillAfter(true);
         v.clearAnimation();
-        v.startAnimation(animSet);
+        alpha.start();
     }
 
     /**
      * actionUp动画
      */
     private void animateActionUp() {
-        View v = getChildViewAt(draggedIndex);
-        AlphaAnimation alpha = new AlphaAnimation(.5f, 1);
-        alpha.setDuration(ANIM_DURATION);
-        AnimationSet animSet = new AnimationSet(true);
-        animSet.addAnimation(alpha);
-        animSet.setFillEnabled(true);
-        animSet.setFillAfter(true);
-        v.clearAnimation();
-        v.startAnimation(animSet);
+        final View draggedView = getChildViewAt(draggedIndex);
+
+        final int indicatorLeft = mIndicatorView.getLeft();
+        final int indicatorTop = mIndicatorView.getTop();
+        Log.i(TAG,"indicatorLeft:"+indicatorLeft+",indicatorTop:"+indicatorTop);
+        PropertyValuesHolder pvhScaleX = PropertyValuesHolder.ofFloat("scaleX", 1.2f, 1);
+        PropertyValuesHolder pvhScaleY = PropertyValuesHolder.ofFloat("scaleY", 1.2f, 1);
+        PropertyValuesHolder pvhx = PropertyValuesHolder.ofFloat("x", draggedView.getLeft(), indicatorLeft);
+        PropertyValuesHolder pvhy = PropertyValuesHolder.ofFloat("y", draggedView.getTop(), indicatorTop);
+
+        ValueAnimator scale = ObjectAnimator.ofPropertyValuesHolder(draggedView,pvhScaleX, pvhScaleY,pvhx,pvhy);
+//        ValueAnimator scale = ObjectAnimator.ofPropertyValuesHolder(draggedView,pvhx,pvhy);
+        scale.setDuration(ANIM_DURATION);
+        scale.addListener(new AnimatorListenerAdapter() {
+            @Override
+            public void onAnimationEnd(Animator animation) {
+//                draggedView.layout(indicatorLeft, indicatorTop, indicatorLeft + itemWidth, indicatorTop + itemHeight);
+
+            }
+        });
+        draggedView.clearAnimation();
+        scale.start();
     }
 
     /**
@@ -498,81 +516,102 @@ public class DraggableGridView extends FrameLayout implements View.OnTouchListen
      */
     private void animateGap(int targetIndex) {
         for (int i = 0; i < getChildViewCount(); i++) {
-            View v = getChildViewAt(i);
-            if (i == draggedIndex)
+            ItemView v = getChildViewAt(i);
+            if (i == draggedIndex) {
                 continue;
+            }
             int newPos = i;
-            if (draggedIndex < targetIndex && i >= draggedIndex + 1 && i <= targetIndex)
+            if (draggedIndex < targetIndex && i >= draggedIndex + 1 && i <= targetIndex) {
+                //例如，从第2个位置，向第3个位置移动 && 当前遍历的item index 比 draggedIndex+1 大 && 比 targetIndex 小
                 newPos--;
-            else if (targetIndex < draggedIndex && i >= targetIndex && i < draggedIndex)
+            } else if (targetIndex < draggedIndex && i >= targetIndex && i < draggedIndex) {
                 newPos++;
+            }
 
             //animate
             int oldPos = i;
-            if (newPositions.get(i) != -1)
-                oldPos = newPositions.get(i);
-            if (oldPos == newPos)
+            if (v.getNewPosition() != -1) {
+                oldPos = v.getNewPosition();
+            }
+            if (oldPos == newPos) {
                 continue;
+            }
 
             Point oldXY = getCoorFromIndex(oldPos);
             Point newXY = getCoorFromIndex(newPos);
-            Point oldOffset = new Point(oldXY.x - v.getLeft(), oldXY.y - v.getTop());
-            Point newOffset = new Point(newXY.x - v.getLeft(), newXY.y - v.getTop());
 
-            TranslateAnimation translate = new TranslateAnimation(Animation.ABSOLUTE, oldOffset.x,
-                    Animation.ABSOLUTE, newOffset.x,
-                    Animation.ABSOLUTE, oldOffset.y,
-                    Animation.ABSOLUTE, newOffset.y);
-            translate.setDuration(ANIM_DURATION);
-            translate.setFillEnabled(true);
-            translate.setFillAfter(true);
+            PropertyValuesHolder pvhx = PropertyValuesHolder.ofFloat("x", oldXY.x, newXY.x);
+            PropertyValuesHolder pvhy = PropertyValuesHolder.ofFloat("y", oldXY.y, newXY.y);
+
+            ValueAnimator alpha = ObjectAnimator.ofPropertyValuesHolder(v,pvhx,pvhy);
+            alpha.setDuration(ANIM_DURATION);
             v.clearAnimation();
-            v.startAnimation(translate);
+            alpha.start();
 
-            newPositions.set(i, newPos);
+            v.setNewPosition(newPos);
         }
     }
 
-    private void reorderChildren() {
+    private void reorderChildrenItem() {
         //FIGURE OUT HOW TO REORDER CHILDREN WITHOUT REMOVING THEM ALL AND RECONSTRUCTING THE LIST!!!
         if (onRearrangeListener != null) {
             onRearrangeListener.onRearrange(draggedIndex, lastTargetIndex);
         }
-        ArrayList<View> children = new ArrayList<View>();
-        for (int i = 0; i < getChildViewCount(); i++) {
-            getChildViewAt(i).clearAnimation();
-            children.add(getChildViewAt(i));
-        }
-        removeAllChildView();
-        while (draggedIndex != lastTargetIndex) {
-            if (lastTargetIndex == children.size()) {
-                // dragged and dropped to the right of the last element
-                children.add(children.remove(draggedIndex));
-                draggedIndex = lastTargetIndex;
-            } else if (draggedIndex < lastTargetIndex) {
-                // shift to the right
-                Collections.swap(children, draggedIndex, draggedIndex + 1);
-                draggedIndex++;
-            } else if (draggedIndex > lastTargetIndex) {
-                // shift to the left
-                Collections.swap(children, draggedIndex, draggedIndex - 1);
-                draggedIndex--;
-            }
+
+        if (draggedIndex != lastTargetIndex){
+            // draggedIndex 有位置交换
+            ItemView removeItem = childViewList.remove(draggedIndex);
+            childViewList.add(lastTargetIndex,removeItem);
+
         }
 
-
-        //添加indicatorView
-        addIndicatorView(mIndicatorView);
-
-        for (int i = 0; i < children.size(); i++) {
-            newPositions.set(i, -1);
-            addChildView(children.get(i));
+        for (int i = 0; i < childViewList.size(); i++) {
+            childViewList.get(i).setNewPosition(-1);
         }
-//		onLayout(true, getLeft(), getTop(), getRight(), getBottom());
-        layoutChildren(getLeft(), getRight());
-        //指示View隐藏在第0个位置
-        layoutViewToIndex(mIndicatorView, 0);
+
     }
+
+    @Deprecated
+//    private void reorderChildren() {
+//        //FIGURE OUT HOW TO REORDER CHILDREN WITHOUT REMOVING THEM ALL AND RECONSTRUCTING THE LIST!!!
+//        if (onRearrangeListener != null) {
+//            onRearrangeListener.onRearrange(draggedIndex, lastTargetIndex);
+//        }
+//        ArrayList<ItemView> children = new ArrayList<ItemView>();
+//        for (int i = 0; i < getChildViewCount(); i++) {
+//            getChildViewAt(i).clearAnimation();
+//            children.add(getChildViewAt(i));
+//        }
+//        removeAllChildView();
+//        while (draggedIndex != lastTargetIndex) {
+//            if (lastTargetIndex == children.size()) {
+//                // dragged and dropped to the right of the last element
+//                children.add(children.remove(draggedIndex));
+//                draggedIndex = lastTargetIndex;
+//            } else if (draggedIndex < lastTargetIndex) {
+//                // shift to the right
+//                Collections.swap(children, draggedIndex, draggedIndex + 1);
+//                draggedIndex++;
+//            } else if (draggedIndex > lastTargetIndex) {
+//                // shift to the left
+//                Collections.swap(children, draggedIndex, draggedIndex - 1);
+//                draggedIndex--;
+//            }
+//        }
+//
+//
+//        //添加indicatorView
+//        addIndicatorView(mIndicatorView);
+//
+//        for (int i = 0; i < children.size(); i++) {
+//            children.get(i).setNewPosition(-1);
+//            addChildView(children.get(i));
+//        }
+////		onLayout(true, getLeft(), getTop(), getRight(), getBottom());
+//        layoutChildren(getLeft(), getRight());
+//        //指示View隐藏在第0个位置
+//        layoutViewToIndex(mIndicatorView, 0);
+//    }
 
     /**
      * get the index of dragging item
@@ -612,9 +651,11 @@ public class DraggableGridView extends FrameLayout implements View.OnTouchListen
         //正常状态
         public static final int STATE_NORMAL = 0;
         //可移动状态
-        public static final int STATE_MOVEABLE = 1;
+        public static final int STATE_MOVABLE = 1;
         //当前item状态
         private int mState = STATE_NORMAL;
+        //当前item应该移动到的新位置
+        private int newPosition = -1;
 
         private final float ROUND;
         //虚线的间隔
@@ -674,9 +715,9 @@ public class DraggableGridView extends FrameLayout implements View.OnTouchListen
             return p;
         }
 
-        public void setStateMoveable(){
-            if (mState != STATE_MOVEABLE){
-                mState = STATE_MOVEABLE;
+        public void setStateMovable(){
+            if (mState != STATE_MOVABLE){
+                mState = STATE_MOVABLE;
                 //重绘
                 invalidate();
             }
@@ -695,12 +736,23 @@ public class DraggableGridView extends FrameLayout implements View.OnTouchListen
             tv_text_view.setText(text);
         }
 
+        public String getText(){
+            return tv_text_view.getText().toString();
+        }
+
+        public void setNewPosition(int newPosition) {
+            this.newPosition = newPosition;
+        }
+
+        public int getNewPosition() {
+            return newPosition;
+        }
 
         @Override
         protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
             super.onLayout(changed, left, top, right, bottom);
 //            mRectF.set(left, top, right, bottom);
-            Log.i(TAG, "left,top,right,bottom:" + left + "," + top + "," + right + "," + bottom);
+//            Log.i(TAG, "left,top,right,bottom:" + left + "," + top + "," + right + "," + bottom);
 
         }
 
@@ -731,7 +783,7 @@ public class DraggableGridView extends FrameLayout implements View.OnTouchListen
             super.onDraw(canvas);
 
             canvas.drawRoundRect(mRectF, ROUND, ROUND, paintRound);
-            if (mState == STATE_MOVEABLE){
+            if (mState == STATE_MOVABLE){
                 //可移动状态，画虚线
                 drawRoundLine(canvas);
             }

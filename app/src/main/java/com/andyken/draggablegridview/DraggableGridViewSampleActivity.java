@@ -15,6 +15,7 @@ import android.widget.AdapterView.OnItemClickListener;
 import android.widget.Button;
 import android.widget.GridView;
 import android.widget.ImageView;
+import android.widget.Toast;
 
 import com.andyken.draggablegridview.views.DraggableGridView;
 
@@ -73,7 +74,9 @@ public class DraggableGridViewSampleActivity extends Activity {
             @Override
             public void onItemClick(AdapterView<?> arg0, View arg1, int arg2, long arg3) {
                 //一个item被点击
-                dgv.removeChildViewAt(arg2);
+//                dgv.removeChildViewAt(arg2);
+                DraggableGridView.ItemView viewAt = (DraggableGridView.ItemView) dgv.getChildViewAt(arg2);
+                Toast.makeText(DraggableGridViewSampleActivity.this,viewAt.getText(),Toast.LENGTH_SHORT).show();
             }
         });
     	button1.setOnClickListener(new OnClickListener() {
