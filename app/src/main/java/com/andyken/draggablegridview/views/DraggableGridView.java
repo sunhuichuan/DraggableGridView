@@ -1,8 +1,6 @@
 package com.andyken.draggablegridview.views;
 
 import android.content.Context;
-import android.content.res.TypedArray;
-import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.DashPathEffect;
@@ -17,7 +15,6 @@ import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewConfiguration;
-import android.view.ViewGroup;
 import android.view.ViewParent;
 import android.view.animation.AlphaAnimation;
 import android.view.animation.Animation;
@@ -25,12 +22,8 @@ import android.view.animation.AnimationSet;
 import android.view.animation.TranslateAnimation;
 import android.widget.AdapterView;
 import android.widget.FrameLayout;
-import android.widget.ImageView;
-import android.widget.RelativeLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
-
-import com.andyken.draggablegridview.R;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -43,7 +36,6 @@ import java.util.List;
 public class DraggableGridView extends FrameLayout implements View.OnTouchListener, View.OnClickListener, View.OnLongClickListener {
     private static final String TAG = "DraggableGridView";
 
-    private AttributeSet attributeSet;
     //当ViewGroup被touchDown时的坐标;用于长按事件发生时，判断是否挪动View
     private int touchDownX = -1, touchDownY = -1;
     private int draggedIndex = -1, lastX = -1, lastY = -1, lastTargetIndex = -1;
@@ -76,7 +68,6 @@ public class DraggableGridView extends FrameLayout implements View.OnTouchListen
 
     public DraggableGridView(Context context, AttributeSet attributeSet) {
         super(context, attributeSet);
-        this.attributeSet = attributeSet;
         touchSlop = ViewConfiguration.get(context).getScaledTouchSlop();
         TOUCH_SPACE = dip2px(context,150f);
         init();
@@ -90,15 +81,12 @@ public class DraggableGridView extends FrameLayout implements View.OnTouchListen
     }
 
     private void initAttributes() {
-        TypedArray typedArray = getContext().obtainStyledAttributes(attributeSet, R.styleable.DraggableGridView);
-        try {
-            itemWidth = (int) typedArray.getDimension(R.styleable.DraggableGridView_itemWidth, 0);
-            itemHeight = (int) typedArray.getDimension(R.styleable.DraggableGridView_itemHeight, 0);
-            colCount = typedArray.getInteger(R.styleable.DraggableGridView_colCount, 0);
-            yPadding = (int) typedArray.getDimension(R.styleable.DraggableGridView_yPadding, 20);
-        } finally {
-            typedArray.recycle();
-        }
+
+        Context context = getContext();
+        itemWidth = dip2px(context,60);
+        itemHeight = dip2px(context,34);
+        colCount = 4;
+        yPadding = dip2px(context,19);
     }
 
     private void initData() {
@@ -207,8 +195,9 @@ public class DraggableGridView extends FrameLayout implements View.OnTouchListen
     }
 
     void layoutChildren(int l, int r) {
+        int width = (r-l);
 
-        xPadding = ((r - l) - (itemWidth * colCount)) / (colCount + 1);
+        xPadding = (width - (itemWidth * colCount)) / (colCount + 1);
         for (int i = 0; i < getChildViewCount(); i++) {
             if (i != draggedIndex) {
                 layoutViewToIndex(getChildViewAt(i), i);
@@ -616,14 +605,23 @@ public class DraggableGridView extends FrameLayout implements View.OnTouchListen
      */
     public static class ItemView extends FrameLayout{
 
+        //正常状态
+        public static final int STATE_NORMAL = 0;
+        //可移动状态
+        public static final int STATE_MOVEABLE = 1;
+        //当前item状态
+        private int mState = STATE_NORMAL;
+
         private final float ROUND;
         //虚线的间隔
         private int LINE_SPACE;
         private int LINE_WIDTH;
-        private Paint mPaint = new Paint();
 
+        //虚线的RectF
+        private RectF mRectFLine = new RectF();
         private RectF mRectF = new RectF();
-
+        private Paint paintRound;
+        private Paint paintLine;
 
         private TextView tv_text_view;
 
@@ -635,10 +633,11 @@ public class DraggableGridView extends FrameLayout implements View.OnTouchListen
             super(context, attrs);
             //因为没有设置背景色，不调用此方法，不会执行onDraw
             setWillNotDraw(false);
-            mPaint.setColor(Color.RED);
-            ROUND = dip2px(context,10f);
+            paintRound = createRoundRectPaint();
+            ROUND = dip2px(context,2.5f);
             LINE_SPACE = dip2px(context,4);
-            LINE_WIDTH = dip2px(context,1);
+            LINE_WIDTH = 1;
+            paintLine = createLinePaint();
             init(context);
         }
 
@@ -646,20 +645,44 @@ public class DraggableGridView extends FrameLayout implements View.OnTouchListen
 
             tv_text_view = new TextView(context);
             tv_text_view.setGravity(Gravity.CENTER);
-            tv_text_view.setTextColor(Color.WHITE);
-            FrameLayout.LayoutParams tv_params = new FrameLayout.LayoutParams(150, 150);
+            tv_text_view.setTextColor(Color.parseColor("#747474"));
+            tv_text_view.setTextSize(17);
             addView(tv_text_view);
-//            addView(tv_text_view, tv_params);
 
-//            setBackgroundColor(Color.RED);
+        }
 
+
+        Paint createRoundRectPaint(){
+            Paint paint = new Paint();
+            paint.setColor(Color.parseColor("#f2f2f2"));
+            return paint;
+        }
+
+        Paint createLinePaint(){
+            Paint p = new Paint();
+            p.setFlags(Paint.ANTI_ALIAS_FLAG);
+            p.setStyle(Paint.Style.STROKE);
+//            p.setColor(Color.parseColor("#d2d2d2"));
+            p.setColor(Color.RED);
+            p.setStrokeWidth(LINE_WIDTH);
+            PathEffect effects = new DashPathEffect(new float[] { LINE_SPACE,LINE_SPACE}, 1);
+            p.setPathEffect(effects);
+            return p;
         }
 
         public void setStateMoveable(){
-//            setBackgroundColor(Color.parseColor(ITEM_COLOR_MOVEABLE));
+            if (mState != STATE_MOVEABLE){
+                mState = STATE_MOVEABLE;
+                //重绘
+                invalidate();
+            }
         }
         public void setStateNormal(){
-//            setBackgroundColor(Color.parseColor(ITEM_COLOR_NORMAL));
+            if (mState != STATE_NORMAL){
+                mState = STATE_NORMAL;
+                //重绘
+                invalidate();
+            }
         }
 
 
@@ -680,12 +703,14 @@ public class DraggableGridView extends FrameLayout implements View.OnTouchListen
         @Override
         protected void onSizeChanged(int w, int h, int oldw, int oldh) {
             super.onSizeChanged(w, h, oldw, oldh);
+
+            mRectF.set(0,0,w,h);
             int left = LINE_WIDTH;
             int top = LINE_WIDTH;
             int right = w - LINE_WIDTH;
             int bottom = h - LINE_WIDTH;
             //把虚线的宽度考虑进去
-            mRectF.set(left,top,right,bottom);
+            mRectFLine.set(left,top,right,bottom);
             resetTextParams(w, h);
         }
 
@@ -701,29 +726,22 @@ public class DraggableGridView extends FrameLayout implements View.OnTouchListen
         protected void onDraw(Canvas canvas) {
             super.onDraw(canvas);
 
-            canvas.drawRoundRect(mRectF, ROUND, ROUND, mPaint);
-
-            drawLine(canvas);
+            canvas.drawRoundRect(mRectF, ROUND, ROUND, paintRound);
+            if (mState == STATE_MOVEABLE){
+                //可移动状态，画虚线
+                drawRoundLine(canvas);
+            }
 
 
         }
 
 
-        protected void drawLine(Canvas canvas){
-
-            Paint p = new Paint();
-            p.setFlags(Paint.ANTI_ALIAS_FLAG);
-            p.setStyle(Paint.Style.STROKE);
-            p.setColor(Color.WHITE);
-            p.setStrokeWidth(LINE_WIDTH);
-            PathEffect effects = new DashPathEffect(new float[] { LINE_SPACE,LINE_SPACE}, 1);
-            p.setPathEffect(effects);
+        protected void drawRoundLine(Canvas canvas){
 
             //画一个圆虚线
 //            canvas.drawRoundRect(mRectF, ROUND,ROUND,p);
-            canvas.drawRoundRect(mRectF,ROUND,ROUND,p);
+            canvas.drawRoundRect(mRectFLine,ROUND,ROUND,paintLine);
         }
-
 
 
 
@@ -747,7 +765,7 @@ public class DraggableGridView extends FrameLayout implements View.OnTouchListen
         protected void onDraw(Canvas canvas) {
 //            super.onDraw(canvas);
             //只画一个虚线
-            drawLine(canvas);
+            drawRoundLine(canvas);
         }
     }
 
