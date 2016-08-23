@@ -328,12 +328,12 @@ public class DraggableGridView extends FrameLayout implements View.OnTouchListen
         }
         //请求不允许父类拦截此touch事件
         requestDisallowInterceptTouchEvent(true);
-        //修改为可移动状态
-        changeItemViewToMoveable();
 
         int index = getIndex();
         if (index != -1) {
-            //如果长按的位置在
+            //如果长按的位置在item上
+            //修改为可移动状态
+            changeItemViewToMoveable();
             draggedIndex = index;
             animateActionDown();
             return true;
@@ -485,17 +485,19 @@ public class DraggableGridView extends FrameLayout implements View.OnTouchListen
      */
     private void animateActionUp() {
         final View draggedView = getChildViewAt(draggedIndex);
+        final int targetIndex = lastTargetIndex;
+//        layoutViewToIndex(draggedView,targetIndex);
 
         final int indicatorLeft = mIndicatorView.getLeft();
         final int indicatorTop = mIndicatorView.getTop();
         Log.i(TAG,"indicatorLeft:"+indicatorLeft+",indicatorTop:"+indicatorTop);
         PropertyValuesHolder pvhScaleX = PropertyValuesHolder.ofFloat("scaleX", 1.2f, 1);
         PropertyValuesHolder pvhScaleY = PropertyValuesHolder.ofFloat("scaleY", 1.2f, 1);
-        PropertyValuesHolder pvhx = PropertyValuesHolder.ofFloat("x", draggedView.getLeft(), indicatorLeft);
-        PropertyValuesHolder pvhy = PropertyValuesHolder.ofFloat("y", draggedView.getTop(), indicatorTop);
+//        PropertyValuesHolder pvhx = PropertyValuesHolder.ofFloat("x", draggedView.getLeft(), indicatorLeft);
+//        PropertyValuesHolder pvhy = PropertyValuesHolder.ofFloat("y", draggedView.getTop(), indicatorTop);
 
-        ValueAnimator scale = ObjectAnimator.ofPropertyValuesHolder(draggedView,pvhScaleX, pvhScaleY,pvhx,pvhy);
-//        ValueAnimator scale = ObjectAnimator.ofPropertyValuesHolder(draggedView,pvhx,pvhy);
+//        ValueAnimator scale = ObjectAnimator.ofPropertyValuesHolder(draggedView,pvhScaleX, pvhScaleY,pvhx,pvhy);
+        ValueAnimator scale = ObjectAnimator.ofPropertyValuesHolder(draggedView,pvhScaleX,pvhScaleY);
         scale.setDuration(ANIM_DURATION);
         scale.addListener(new AnimatorListenerAdapter() {
             @Override
