@@ -485,20 +485,37 @@ public class DraggableGridView extends FrameLayout implements View.OnTouchListen
      */
     private void animateActionUp() {
         final View draggedView = getChildViewAt(draggedIndex);
-        final int targetIndex = lastTargetIndex;
 //        layoutViewToIndex(draggedView,targetIndex);
+        //为了取得当前item在Parent的位置，容易嘛……
+        Rect draggedRect = new Rect();
+        draggedView.getGlobalVisibleRect(draggedRect);
+        Rect gridViewRect = new Rect();
+        this.getGlobalVisibleRect(gridViewRect);
+        int draggedLeft = draggedRect.left-gridViewRect.left;
+        int draggedTop = draggedRect.top-gridViewRect.top;
 
         final int indicatorLeft = mIndicatorView.getLeft();
         final int indicatorTop = mIndicatorView.getTop();
+
         Log.i(TAG,"indicatorLeft:"+indicatorLeft+",indicatorTop:"+indicatorTop);
         PropertyValuesHolder pvhScaleX = PropertyValuesHolder.ofFloat("scaleX", 1.2f, 1);
         PropertyValuesHolder pvhScaleY = PropertyValuesHolder.ofFloat("scaleY", 1.2f, 1);
-//        PropertyValuesHolder pvhx = PropertyValuesHolder.ofFloat("x", draggedView.getLeft(), indicatorLeft);
-//        PropertyValuesHolder pvhy = PropertyValuesHolder.ofFloat("y", draggedView.getTop(), indicatorTop);
+        PropertyValuesHolder pvhx = PropertyValuesHolder.ofFloat("x", draggedLeft, indicatorLeft);
+        PropertyValuesHolder pvhy = PropertyValuesHolder.ofFloat("y", draggedTop, indicatorTop);
 
-//        ValueAnimator scale = ObjectAnimator.ofPropertyValuesHolder(draggedView,pvhScaleX, pvhScaleY,pvhx,pvhy);
-        ValueAnimator scale = ObjectAnimator.ofPropertyValuesHolder(draggedView,pvhScaleX,pvhScaleY);
+        ValueAnimator scale = ObjectAnimator.ofPropertyValuesHolder(draggedView,pvhScaleX, pvhScaleY,pvhx,pvhy);
+//        ValueAnimator scale = ObjectAnimator.ofPropertyValuesHolder(draggedView,pvhScaleX,pvhScaleY);
         scale.setDuration(ANIM_DURATION);
+        scale.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+            @Override
+            public void onAnimationUpdate(ValueAnimator animation) {
+                Object animatedValue = animation.getAnimatedValue();
+                Log.i(TAG,"animatedValue : "+animatedValue.toString());
+
+                Log.i(TAG, "animatedValue draggedView.getLeft() : " + draggedView.getLeft()+",draggedView.getTop()"+draggedView.getTop());
+
+            }
+        });
         scale.addListener(new AnimatorListenerAdapter() {
             @Override
             public void onAnimationEnd(Animator animation) {
