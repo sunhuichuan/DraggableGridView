@@ -1,5 +1,6 @@
 package com.andyken.draggablegridview.views;
 
+import android.animation.Animator;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -19,6 +20,7 @@ import android.view.ViewParent;
 import android.view.animation.AlphaAnimation;
 import android.view.animation.Animation;
 import android.view.animation.AnimationSet;
+import android.view.animation.ScaleAnimation;
 import android.view.animation.TranslateAnimation;
 import android.widget.AdapterView;
 import android.widget.FrameLayout;
@@ -83,10 +85,12 @@ public class DraggableGridView extends FrameLayout implements View.OnTouchListen
     private void initAttributes() {
 
         Context context = getContext();
-        itemWidth = dip2px(context,60);
+//        itemWidth = dip2px(context,60);
         itemHeight = dip2px(context,34);
         colCount = 4;
         yPadding = dip2px(context,19);
+        //通过xPadding，决定itemWidth
+        xPadding = dip2px(context,19);
     }
 
     private void initData() {
@@ -196,8 +200,8 @@ public class DraggableGridView extends FrameLayout implements View.OnTouchListen
 
     void layoutChildren(int l, int r) {
         int width = (r-l);
-
-        xPadding = (width - (itemWidth * colCount)) / (colCount + 1);
+        itemWidth = (width - (colCount + 1)*xPadding)/colCount;
+//        xPadding = (width - (itemWidth * colCount)) / (colCount + 1);
         for (int i = 0; i < getChildViewCount(); i++) {
             if (i != draggedIndex) {
                 layoutViewToIndex(getChildViewAt(i), i);
