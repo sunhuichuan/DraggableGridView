@@ -483,7 +483,8 @@ public class DraggableGridView extends FrameLayout implements View.OnTouchListen
      */
     private void animateActionDown() {
         View draggedView = getChildViewAt(draggedIndex);
-//        draggedView.bringToFront();
+        //把当前itemView置于最高层级
+        draggedView.bringToFront();
 
         PropertyValuesHolder pvhScaleX = PropertyValuesHolder.ofFloat("scaleX", 1, 1.2f);
         PropertyValuesHolder pvhScaleY = PropertyValuesHolder.ofFloat("scaleY", 1, 1.2f);
