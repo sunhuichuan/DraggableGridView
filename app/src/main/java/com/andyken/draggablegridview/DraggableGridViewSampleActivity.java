@@ -1,11 +1,6 @@
 package com.andyken.draggablegridview;
 
 import android.app.Activity;
-import android.graphics.Bitmap;
-import android.graphics.Canvas;
-import android.graphics.Color;
-import android.graphics.Paint;
-import android.graphics.Rect;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -13,8 +8,6 @@ import android.view.View.OnClickListener;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.Button;
-import android.widget.GridView;
-import android.widget.ImageView;
 import android.widget.Toast;
 
 import com.andyken.draggablegridview.views.DraggableGridView;
@@ -51,11 +44,12 @@ public class DraggableGridViewSampleActivity extends Activity {
         DraggableGridView.IndicatorView indicator = new DraggableGridView.IndicatorView(DraggableGridViewSampleActivity.this);
         dgv.addIndicatorView(indicator);
 
-        for (int i=0;i<30;i++){
+        for (int i=0;i<27;i++){
 
-			String word = words[random.nextInt(words.length)];
+//			String word = words[random.nextInt(words.length)];
+            String word = "item--"+i;
 			DraggableGridView.ItemView view = new DraggableGridView.ItemView(DraggableGridViewSampleActivity.this);
-			view.setChannel(new Channel(word));
+			view.setChannel(new ChannelTag(word));
 			dgv.addChildView(view);
 
 		}
@@ -74,17 +68,23 @@ public class DraggableGridViewSampleActivity extends Activity {
             public void onItemClick(AdapterView<?> arg0, View arg1, int arg2, long arg3) {
                 //一个item被点击
 //                dgv.removeChildViewAt(arg2);
-                DraggableGridView.ItemView viewAt = (DraggableGridView.ItemView) dgv.getChildViewAt(arg2);
-                Toast.makeText(DraggableGridViewSampleActivity.this,viewAt.getChannel().getName(),Toast.LENGTH_SHORT).show();
+                DraggableGridView.ItemView viewAt = dgv.getChildViewAt(arg2);
+                String info = viewAt.getChannel().getName()+"--left,top : "+viewAt.getLeft()+","+viewAt.getTop();
+                Log.i(TAG,"itemInfo:"+info);
+                Toast.makeText(DraggableGridViewSampleActivity.this,info,Toast.LENGTH_SHORT).show();
             }
         });
     	button1.setOnClickListener(new OnClickListener() {
             public void onClick(View arg0) {
                 //点击 button 增加一个item
-                String word = words[random.nextInt(words.length)];
-                DraggableGridView.ItemView view = new DraggableGridView.ItemView(DraggableGridViewSampleActivity.this);
-                view.setChannel(new Channel(word));
-                dgv.addChildView(view);
+//                String word = words[random.nextInt(words.length)];
+//                DraggableGridView.ItemView view = new DraggableGridView.ItemView(DraggableGridViewSampleActivity.this);
+//                view.setChannel(new Channel(word));
+//                dgv.addChildView(view);
+
+
+                dgv.layoutChildrenView(dgv.getWidth());
+
             }
         });
     }

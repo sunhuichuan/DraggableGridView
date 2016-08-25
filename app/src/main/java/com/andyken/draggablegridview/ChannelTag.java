@@ -4,11 +4,11 @@ package com.andyken.draggablegridview;
  *
  * Created by huichuan on 16/8/25.
  */
-public class Channel {
+public class ChannelTag {
     private String name;
 
 
-    public Channel(String name){
+    public ChannelTag(String name){
         this.name = name;
     }
 
