@@ -49,14 +49,13 @@ public class DraggableGridViewSampleActivity extends Activity {
 
 
         DraggableGridView.IndicatorView indicator = new DraggableGridView.IndicatorView(DraggableGridViewSampleActivity.this);
-        indicator.setText("啥啥啥");
         dgv.addIndicatorView(indicator);
 
         for (int i=0;i<30;i++){
 
 			String word = words[random.nextInt(words.length)];
 			DraggableGridView.ItemView view = new DraggableGridView.ItemView(DraggableGridViewSampleActivity.this);
-			view.setText(word);
+			view.setChannel(new Channel(word));
 			dgv.addChildView(view);
 
 		}
@@ -76,7 +75,7 @@ public class DraggableGridViewSampleActivity extends Activity {
                 //一个item被点击
 //                dgv.removeChildViewAt(arg2);
                 DraggableGridView.ItemView viewAt = (DraggableGridView.ItemView) dgv.getChildViewAt(arg2);
-                Toast.makeText(DraggableGridViewSampleActivity.this,viewAt.getText(),Toast.LENGTH_SHORT).show();
+                Toast.makeText(DraggableGridViewSampleActivity.this,viewAt.getChannel().getName(),Toast.LENGTH_SHORT).show();
             }
         });
     	button1.setOnClickListener(new OnClickListener() {
@@ -84,7 +83,7 @@ public class DraggableGridViewSampleActivity extends Activity {
                 //点击 button 增加一个item
                 String word = words[random.nextInt(words.length)];
                 DraggableGridView.ItemView view = new DraggableGridView.ItemView(DraggableGridViewSampleActivity.this);
-                view.setText(word);
+                view.setChannel(new Channel(word));
                 dgv.addChildView(view);
             }
         });

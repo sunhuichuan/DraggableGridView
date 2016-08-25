@@ -1,5 +1,8 @@
 package com.andyken.draggablegridview.views;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.animation.ObjectAnimator;
@@ -26,13 +29,11 @@ import android.widget.FrameLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import com.andyken.draggablegridview.Channel;
 
 /**
  *
- * Created by andyken on 16/3/22.
+ * 拖动排序频道GridView.
  */
 public class DraggableGridView extends FrameLayout implements View.OnTouchListener, View.OnClickListener, View.OnLongClickListener {
     private static final String TAG = "DraggableGridView";
@@ -65,6 +66,9 @@ public class DraggableGridView extends FrameLayout implements View.OnTouchListen
     private int TOUCH_SPACE = 0;
 
 
+    public DraggableGridView(Context context) {
+        this(context, null);
+    }
     public DraggableGridView(Context context, AttributeSet attributeSet) {
         super(context, attributeSet);
         touchSlop = ViewConfiguration.get(context).getScaledTouchSlop();
@@ -199,7 +203,7 @@ public class DraggableGridView extends FrameLayout implements View.OnTouchListen
 //        xPadding = (width - (itemWidth * colCount)) / (colCount + 1);
         for (int i = 0; i < getChildViewCount(); i++) {
 //            if (i != draggedIndex) {
-                layoutViewToIndex(getChildViewAt(i), i);
+            layoutViewToIndex(getChildViewAt(i), i);
 //            }
         }
     }
@@ -504,25 +508,8 @@ public class DraggableGridView extends FrameLayout implements View.OnTouchListen
         PropertyValuesHolder pvhy = PropertyValuesHolder.ofFloat("y", draggedTop, indicatorTop);
 
         ValueAnimator scale = ObjectAnimator.ofPropertyValuesHolder(draggedView,pvhScaleX, pvhScaleY,pvhx,pvhy);
-//        ValueAnimator scale = ObjectAnimator.ofPropertyValuesHolder(draggedView,pvhScaleX,pvhScaleY);
+//        ValueAnimator scale = ObjectAnimator.ofPropertyValuesHolder(draggedView,pvhx,pvhy);
         scale.setDuration(ANIM_DURATION);
-        scale.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
-            @Override
-            public void onAnimationUpdate(ValueAnimator animation) {
-                Object animatedValue = animation.getAnimatedValue();
-                Log.i(TAG,"animatedValue : "+animatedValue.toString());
-
-                Log.i(TAG, "animatedValue draggedView.getLeft() : " + draggedView.getLeft()+",draggedView.getTop()"+draggedView.getTop());
-
-            }
-        });
-        scale.addListener(new AnimatorListenerAdapter() {
-            @Override
-            public void onAnimationEnd(Animator animation) {
-//                draggedView.layout(indicatorLeft, indicatorTop, indicatorLeft + itemWidth, indicatorTop + itemHeight);
-
-            }
-        });
         draggedView.clearAnimation();
         scale.start();
     }
@@ -675,6 +662,7 @@ public class DraggableGridView extends FrameLayout implements View.OnTouchListen
         private int mState = STATE_NORMAL;
         //当前item应该移动到的新位置
         private int newPosition = -1;
+        private Channel channel;
 
         private final float ROUND;
         //虚线的间隔
@@ -711,6 +699,7 @@ public class DraggableGridView extends FrameLayout implements View.OnTouchListen
             tv_text_view.setGravity(Gravity.CENTER);
             tv_text_view.setTextColor(Color.parseColor("#747474"));
             tv_text_view.setTextSize(17);
+            tv_text_view.setSingleLine();
             addView(tv_text_view);
 
         }
@@ -751,12 +740,13 @@ public class DraggableGridView extends FrameLayout implements View.OnTouchListen
 
 
         //设置文字
-        public void setText(String text){
-            tv_text_view.setText(text);
+        public void setChannel(Channel channel){
+            this.channel = channel;
+            tv_text_view.setText(channel.getName());
         }
 
-        public String getText(){
-            return tv_text_view.getText().toString();
+        public Channel getChannel(){
+            return channel;
         }
 
         public void setNewPosition(int newPosition) {
