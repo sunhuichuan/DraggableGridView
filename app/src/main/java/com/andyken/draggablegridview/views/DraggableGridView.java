@@ -12,6 +12,7 @@ import android.graphics.PathEffect;
 import android.graphics.Point;
 import android.graphics.Rect;
 import android.graphics.RectF;
+import android.os.Build;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.Gravity;
@@ -668,6 +669,16 @@ public class DraggableGridView extends FrameLayout implements View.OnTouchListen
             tv_text_view.setSingleLine();
             addView(tv_text_view);
 
+            if (Build.VERSION.SDK_INT >= 24){
+                //7.0以上，要延迟刷新一下，否则tv_text_view的宽高不正确，不知道因为啥啊
+                postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        refreshContentParams();
+                    }
+                },200);
+            }
+
         }
 
 
@@ -726,26 +737,32 @@ public class DraggableGridView extends FrameLayout implements View.OnTouchListen
         @Override
         protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
             super.onLayout(changed, left, top, right, bottom);
-//            mRectF.set(left, top, right, bottom);
             Log.i(TAG, "onLayout-->left,top,right,bottom:" + left + "," + top + "," + right + "," + bottom);
-            int width = (right-left);
-            int height = (bottom-top);
-            Log.i(TAG, "onLayout-->width,height:" + width + "," + height);
-            refreshContentParams(width,height);
-
         }
 
-        //因为在Android7.0系统中初次绘制系统不会调用onSizeChanged，所以此方法需要放在onLayout中，
-        // 但是onLayout方法会执行多次（测试到两次），也不完美
-        void refreshContentParams(int w,int h){
+        @Override
+        protected void onSizeChanged(int w, int h, int oldw, int oldh) {
+            super.onSizeChanged(w, h, oldw, oldh);
+            Log.i(TAG, "onSizeChanged-->width,height:" + w + "," + h);
             mRectF.set(0,0,w,h);
+            if (Build.VERSION.SDK_INT < 24){
+                //Android 7.0 以下，都直接设置子View宽高
+                refreshContentParams();
+            }
+        }
+
+        //因为在Android7.0系统中直接在onSizeChanged方法中设置子View的宽高不生效，所以要封装到此方法中延迟执行
+        public void refreshContentParams(){
+            int width = Math.round(mRectF.width());
+            int height = Math.round(mRectF.height());
+
             int left = LINE_WIDTH;
             int top = LINE_WIDTH;
-            int right = w - LINE_WIDTH;
-            int bottom = h - LINE_WIDTH;
+            int right = width - LINE_WIDTH;
+            int bottom = height - LINE_WIDTH;
             //把虚线的宽度考虑进去
             mRectFLine.set(left,top,right,bottom);
-            resetTextParams(w, h);
+            resetTextParams(width, height);
         }
 
 
