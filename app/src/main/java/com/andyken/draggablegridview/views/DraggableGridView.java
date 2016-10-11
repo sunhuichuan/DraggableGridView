@@ -727,14 +727,17 @@ public class DraggableGridView extends FrameLayout implements View.OnTouchListen
         protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
             super.onLayout(changed, left, top, right, bottom);
 //            mRectF.set(left, top, right, bottom);
-//            Log.i(TAG, "left,top,right,bottom:" + left + "," + top + "," + right + "," + bottom);
+            Log.i(TAG, "onLayout-->left,top,right,bottom:" + left + "," + top + "," + right + "," + bottom);
+            int width = (right-left);
+            int height = (bottom-top);
+            Log.i(TAG, "onLayout-->width,height:" + width + "," + height);
+            refreshContentParams(width,height);
 
         }
 
-        @Override
-        protected void onSizeChanged(int w, int h, int oldw, int oldh) {
-            super.onSizeChanged(w, h, oldw, oldh);
-
+        //因为在Android7.0系统中初次绘制系统不会调用onSizeChanged，所以此方法需要放在onLayout中，
+        // 但是onLayout方法会执行多次（测试到两次），也不完美
+        void refreshContentParams(int w,int h){
             mRectF.set(0,0,w,h);
             int left = LINE_WIDTH;
             int top = LINE_WIDTH;
